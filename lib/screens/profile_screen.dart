@@ -72,7 +72,7 @@ class ProfileScreen extends ConsumerWidget {
             title: const Text('Test notification'),
             onTap: () => Notifications.show(
               'Possible match for "White wireless earbuds"',
-              'Found: white earbuds case near Central Cafeteria (82% match)',
+              'Found: white earbuds case near Food Court (near TT) (82% match)',
             ),
           ),
           ListTile(

@@ -89,9 +89,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'Campus lost & found — verified handovers, '
-                      'no phone numbers shared.',
+                    Text(
+                      '${AppConfig.campusName} lost & found — verified '
+                      'handovers, no phone numbers shared.',
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 24),
@@ -136,7 +136,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       keyboardType: TextInputType.emailAddress,
                       autofillHints: const [AutofillHints.email],
                       decoration: const InputDecoration(
-                        labelText: 'Campus e-mail',
+                        labelText: 'VIT e-mail',
+                        hintText: 'name@vitstudent.ac.in',
                         prefixIcon: Icon(Icons.alternate_email),
                       ),
                       validator: _validateEmail,

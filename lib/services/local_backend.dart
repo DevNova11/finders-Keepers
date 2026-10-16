@@ -38,7 +38,7 @@ class LocalBackend implements Backend {
 
   static Future<LocalBackend> open() async {
     final dir = await getApplicationDocumentsDirectory();
-    final b = LocalBackend._(File('${dir.path}/demo_db.json'));
+    final b = LocalBackend._(File('${dir.path}/demo_db_vit.json'));
     await b._load();
     return b;
   }
@@ -139,9 +139,9 @@ class LocalBackend implements Backend {
   void _seed() {
     final now = DateTime.now();
     const users = [
-      ('u_asha', 'Asha Raman', 'asha@campus.edu'),
-      ('u_ben', 'Ben Thomas', 'ben@campus.edu'),
-      ('u_chen', 'Chen Li', 'chen@campus.edu'),
+      ('u_asha', 'Asha Raman', 'asha.raman2024@vitstudent.ac.in'),
+      ('u_ben', 'Ben Thomas', 'ben.thomas2024@vitstudent.ac.in'),
+      ('u_chen', 'Chen Li', 'chen.li2024@vitstudent.ac.in'),
     ];
     for (final (uid, name, email) in users) {
       _users[uid] = AppUser(
@@ -192,23 +192,23 @@ class LocalBackend implements Backend {
 
     final seed = [
       mk('seed_wallet', ItemType.found, 'Brown leather wallet',
-          'Found on a table near the window seats, second floor.',
-          'wallet', 'brown', 0, 3, 'u_ben',
+          'Found on a table near the window seats, second floor of the library.',
+          'wallet', 'brown', 3, 3, 'u_ben',
           questions: ['What brand is the wallet?', 'Name one card (not cash) that is inside it.']),
       mk('seed_earbuds', ItemType.lost, 'White wireless earbuds in case',
           'Lost my white earbuds case, has a small blue sticker on the back.',
-          'earphones', 'white', 1, 20, 'u_asha'),
+          'earphones', 'white', 10, 20, 'u_asha'),
       mk('seed_keys', ItemType.found, 'Bunch of 3 keys with red keychain',
           'Three keys on a ring with a red plastic keychain, found by the bench.',
-          'keys', 'red', 4, 30, 'u_chen',
+          'keys', 'red', 12, 30, 'u_chen',
           questions: ['How many keys are on the ring?', 'What shape is the keychain?']),
       mk('seed_idcard', ItemType.found, 'Student ID card',
           'Student ID card found at the main gate. Photo blurred for privacy.',
-          'id_card', 'blue', 6, 6, 'u_chen',
-          questions: ['What name is printed on the card?', 'What is your department?']),
+          'id_card', 'blue', 0, 6, 'u_chen',
+          questions: ['What name is printed on the card?', 'What is your school / department?']),
       mk('seed_bottle', ItemType.lost, 'Steel water bottle',
-          'Silver steel bottle with mountain stickers, left in the gym.',
-          'bottle', 'silver', 4, 50, 'u_ben'),
+          'Silver steel bottle with mountain stickers, left at the outdoor stadium.',
+          'bottle', 'silver', 13, 50, 'u_ben'),
     ];
     for (final i in seed) {
       _items[i.id] = i;
@@ -220,7 +220,7 @@ class LocalBackend implements Backend {
       expectedAnswers: ['3|three', 'heart'],
     );
     _secrets['seed_idcard'] = Verification.buildSecret(
-      expectedAnswers: ['Asha Raman', 'ECE|electronics'],
+      expectedAnswers: ['Asha Raman', 'SENSE|ECE|electronics'],
     );
   }
 

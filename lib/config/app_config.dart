@@ -6,14 +6,15 @@ class AppConfig {
 
   static const appName = 'Finders Keepers';
 
-  /// Centre of the campus map. Replace with your campus coordinates.
-  static const campusCenter = LatLng(13.0108, 80.2354);
-  static const campusZoom = 16.0;
+  /// VIT Vellore campus (Katpadi, Vellore, Tamil Nadu).
+  static const campusName = 'VIT Vellore';
+  static const campusCenter = LatLng(12.9712, 79.1600);
+  static const campusZoom = 15.8;
 
   /// Only e-mail addresses on these domains may register (empty = allow all).
   /// Restricting sign-up to campus e-mail is the first anti-fraud layer:
   /// every claimant is a traceable member of the campus.
-  static const allowedEmailDomains = <String>[];
+  static const allowedEmailDomains = <String>['vitstudent.ac.in', 'vit.ac.in'];
 
   /// Firebase mode requires a verified campus e-mail before posting/claiming.
   static const requireEmailVerification = true;
@@ -28,21 +29,29 @@ class AppConfig {
   /// Minimum match score (0..1) for a "possible match" alert.
   static const matchThreshold = 0.45;
 
-  /// Named campus landmarks used for quick location selection.
+  /// Named VIT Vellore landmarks (coordinates from OpenStreetMap).
   static const landmarks = <Landmark>[
-    Landmark('Main Library', LatLng(13.0115, 80.2360)),
-    Landmark('Central Cafeteria', LatLng(13.0100, 80.2345)),
-    Landmark('Academic Block A', LatLng(13.0122, 80.2340)),
-    Landmark('Academic Block B', LatLng(13.0095, 80.2365)),
-    Landmark('Sports Complex', LatLng(13.0085, 80.2330)),
-    Landmark('Hostel Zone', LatLng(13.0130, 80.2375)),
-    Landmark('Main Gate', LatLng(13.0078, 80.2355)),
-    Landmark('Auditorium', LatLng(13.0108, 80.2372)),
-    Landmark('Parking Lot', LatLng(13.0090, 80.2318)),
+    Landmark('Main Gate', LatLng(12.96836, 79.15568)),
+    Landmark('Main Building', LatLng(12.96924, 79.15589)),
+    Landmark('Anna Auditorium', LatLng(12.96995, 79.15567)),
+    Landmark('EV Periyar Central Library', LatLng(12.96932, 79.15686)),
+    Landmark('Sir M Visvesvaraya Block (SMV)', LatLng(12.96923, 79.15773)),
+    Landmark('G.D. Naidu Block (GDN)', LatLng(12.96994, 79.15484)),
+    Landmark('CDMM Building', LatLng(12.96917, 79.15496)),
+    Landmark('Technology Tower (TT)', LatLng(12.97066, 79.15951)),
+    Landmark('Silver Jubilee Tower (SJT)', LatLng(12.97095, 79.16393)),
+    Landmark('Pearl Research Park (PRP)', LatLng(12.97142, 79.16625)),
+    Landmark('Food Court (near TT)', LatLng(12.97011, 79.15907)),
+    Landmark('Foodys', LatLng(12.96899, 79.15834)),
+    Landmark('Kalpana Chawla Ground', LatLng(12.96824, 79.15696)),
+    Landmark('Outdoor Stadium', LatLng(12.97597, 79.16007)),
+    Landmark("Men's Hostel (MH)", LatLng(12.97209, 79.15919)),
+    Landmark("Ladies' Hostel (LH)", LatLng(12.97095, 79.16068)),
+    Landmark('Health Centre', LatLng(12.96950, 79.15465)),
   ];
 
   /// Safe, public handover point recommended to both parties.
-  static const recommendedHandoverPoint = 'Campus Security Desk, Main Gate';
+  static const recommendedHandoverPoint = 'VIT Main Gate security desk';
 }
 
 class Landmark {

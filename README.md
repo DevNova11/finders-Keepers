@@ -1,4 +1,4 @@
-# Finders Keepers? — Campus Lost & Found
+# Finders Keepers? — VIT Vellore Lost & Found
 
 A Flutter app that connects people who lost items on campus with people who
 found them. It uses a **verified ownership-claim + handover-code** process to
@@ -42,9 +42,9 @@ The APK is written to `build/app/outputs/flutter-apk/app-release.apk`.
 ### Suggested demo script (for the video)
 
 1. Sign in as **Chen**. You see Chen's found *Student ID card* with the secret
-   questions "What name is printed on the card?" / "What is your department?".
+   questions "What name is printed on the card?" / "What is your school / department?".
 2. Switch account → **Asha**. Browse → open *Student ID card* → **This is mine — claim it**.
-   Answer `Asha Raman` and `ece`, describe it, submit.
+   Answer `Asha Raman` and `SENSE`, describe it, submit.
 3. Switch to **Chen** → Activity → *To review*. The claim shows a **100 % match**
    (each answer ✓). Claim as **Ben** with wrong answers to see a weak score.
    Message the claimant in chat, then **Approve** Asha's claim (Ben's is auto-rejected).
@@ -54,8 +54,8 @@ The APK is written to `build/app/outputs/flutter-apk/app-release.apk`.
 6. Offline: Profile → **Simulate offline** → report an item → it waits under
    *Activity → Waiting to upload*; switch back online → it uploads by itself.
    Leave a report form half-filled and close the app → reopen the form → the draft is restored.
-7. Matching: as **Ben**, report a *found* white earbuds case at the Central
-   Cafeteria. Switch to **Asha** → her *White wireless earbuds* lost post lists it
+7. Matching: as **Ben**, report a *found* white earbuds case at the Food Court
+   (near TT). Switch to **Asha** → her *White wireless earbuds* lost post lists it
    under **Possible matches** with a % score. (Live match notifications fire
    when a matching item arrives while you are signed in; with Firebase the
    Cloud Function pushes them even when the app is closed. Profile → *Test
@@ -83,8 +83,11 @@ The APK is written to `build/app/outputs/flutter-apk/app-release.apk`.
    npm install
    firebase deploy --only functions
    ```
-5. Campus settings live in `lib/config/app_config.dart`: map centre,
-   landmarks, **allowed e-mail domains** (e.g. `['youruni.edu']`), handover point.
+5. Campus settings live in `lib/config/app_config.dart`. It is set up for
+   **VIT Vellore**: map centre, 17 campus landmarks (Main Gate, TT, SJT, SMV,
+   GDN, PRP, library, Food Court, MH/LH, grounds…, coordinates from
+   OpenStreetMap), sign-up restricted to `@vitstudent.ac.in` / `@vit.ac.in`,
+   and the Main Gate security desk as the recommended handover point.
 
 You can also test everything against the Firebase Emulator Suite
 (`firebase emulators:start`, configured in `firebase.json`).
