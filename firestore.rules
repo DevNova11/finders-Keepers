@@ -1,0 +1,164 @@
+rules_version = '2';
+
+// Finders Keepers — Cloud Firestore security rules.
+// The server-side half of the ownership-verification and privacy design:
+//  * only verified campus accounts may post, claim or chat
+//  * item answers / exact location live in a reporter-only subcollection
+//  * claims are visible only to the claimant and the item's reporter
+//  * one claim per user per item (deterministic id) → answers can't be brute-forced
+//  * item state machine: found → claimed → returned only through an approved
+//    claim, and "returned" only after the handover code hash matches
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
+    function verified() {
+      return signedIn() && request.auth.token.email_verified == true;
+    }
+    function changedOnly(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+    function itemPath(id) { return /databases/$(database)/documents/items/$(id); }
+    function claimPath(id) { return /databases/$(database)/documents/claims/$(id); }
+    function str(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
+
+    match /users/{userId} {
+      allow read, write: if signedIn() && uid() == userId;
+      match /notifications/{n} {
+        allow read, delete: if signedIn() && uid() == userId;
+      }
+    }
+
+    match /items/{itemId} {
+      allow read: if signedIn();
+
+      allow create: if verified()
+        && request.resource.data.id == itemId
+        && request.resource.data.reporterId == uid()
+        && ((request.resource.data.type == 'lost' && request.resource.data.status == 'lost')
+            || (request.resource.data.type == 'found' && request.resource.data.status == 'found'))
+        && request.resource.data.approvedClaimId == null
+        && str(request.resource.data.title, 3, 100)
+        && str(request.resource.data.description, 5, 1000)
+        && request.resource.data.imageUrls.size() <= 3
+        && request.resource.data.verificationQuestions.size() <= 3
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if verified()
+        && resource.data.reporterId == uid()
+        && request.resource.data.reporterId == resource.data.reporterId
+        && request.resource.data.type == resource.data.type
+        && (
+          // Close an open report.
+          (changedOnly(['status', 'updatedAt', 'history'])
+            && resource.data.status in ['lost', 'found']
+            && request.resource.data.status == 'closed')
+          // Owner progresses their own LOST report.
+          || (resource.data.type == 'lost'
+            && changedOnly(['status', 'updatedAt', 'history'])
+            && ((resource.data.status == 'lost' && request.resource.data.status in ['claimed', 'returned'])
+                || (resource.data.status == 'claimed' && request.resource.data.status == 'returned')))
+          // Finder approves a claim (same batch as the claim update).
+          || (resource.data.type == 'found'
+            && changedOnly(['status', 'updatedAt', 'history', 'approvedClaimId'])
+            && resource.data.status == 'found'
+            && request.resource.data.status == 'claimed'
+            && getAfter(claimPath(request.resource.data.approvedClaimId)).data.status == 'approved'
+            && getAfter(claimPath(request.resource.data.approvedClaimId)).data.itemId == itemId)
+          // Finder completes the handover (same batch as the claim completion).
+          || (resource.data.type == 'found'
+            && changedOnly(['status', 'updatedAt', 'history'])
+            && resource.data.status == 'claimed'
+            && request.resource.data.status == 'returned'
+            && getAfter(claimPath(resource.data.approvedClaimId)).data.status == 'completed')
+        );
+
+      allow delete: if false;
+
+      // Hashed answers, salt, exact coordinates, private notes.
+      match /private/{doc} {
+        allow read: if signedIn() && get(itemPath(itemId)).data.reporterId == uid();
+        allow create: if verified() && getAfter(itemPath(itemId)).data.reporterId == uid();
+        allow update, delete: if false;
+      }
+    }
+
+    match /claims/{claimId} {
+      function isParty(data) {
+        return data.claimantId == uid() || data.itemReporterId == uid();
+      }
+
+      // resource == null lets a claimant check whether they already claimed.
+      allow read: if signedIn() && (resource == null || isParty(resource.data));
+
+      allow create: if verified()
+        && claimId == request.resource.data.itemId + '_' + uid()
+        && request.resource.data.id == claimId
+        && request.resource.data.claimantId == uid()
+        && request.resource.data.status == 'pending'
+        && request.resource.data.handoverCodeHash == null
+        && get(itemPath(request.resource.data.itemId)).data.type == 'found'
+        && get(itemPath(request.resource.data.itemId)).data.status == 'found'
+        && get(itemPath(request.resource.data.itemId)).data.reporterId == request.resource.data.itemReporterId
+        && request.resource.data.itemReporterId != uid()
+        && request.resource.data.answers.size()
+             == get(itemPath(request.resource.data.itemId)).data.verificationQuestions.size()
+        && str(request.resource.data.description, 15, 2000)
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if verified() && (
+        // Finder approves (item must be moved to "claimed" in the same batch) …
+        (resource.data.itemReporterId == uid()
+          && resource.data.status == 'pending'
+          && request.resource.data.status == 'approved'
+          && changedOnly(['status', 'updatedAt'])
+          && getAfter(itemPath(resource.data.itemId)).data.approvedClaimId == claimId)
+        // … or rejects.
+        || (resource.data.itemReporterId == uid()
+          && resource.data.status == 'pending'
+          && request.resource.data.status == 'rejected'
+          && changedOnly(['status', 'updatedAt', 'rejectionReason']))
+        // Claimant withdraws.
+        || (resource.data.claimantId == uid()
+          && resource.data.status == 'pending'
+          && request.resource.data.status == 'withdrawn'
+          && changedOnly(['status', 'updatedAt']))
+        // Claimant publishes the hash of their handover code, exactly once.
+        || (resource.data.claimantId == uid()
+          && resource.data.status == 'approved'
+          && resource.data.get('handoverCodeHash', null) == null
+          && changedOnly(['handoverCodeHash', 'handoverSalt', 'updatedAt']))
+        // Finder completes ONLY with the code the claimant shows in person.
+        || (resource.data.itemReporterId == uid()
+          && resource.data.status == 'approved'
+          && request.resource.data.status == 'completed'
+          && changedOnly(['status', 'handoverCodeEntered', 'updatedAt'])
+          && resource.data.get('handoverCodeHash', null) != null
+          && hashing.sha256(request.resource.data.handoverCodeEntered + resource.data.handoverSalt)
+               .toHexString().lower() == resource.data.handoverCodeHash)
+      );
+
+      allow delete: if false;
+
+      // Plain handover code — claimant only.
+      match /private/{doc} {
+        allow read, write: if signedIn() && get(claimPath(claimId)).data.claimantId == uid();
+      }
+
+      match /messages/{messageId} {
+        allow read: if signedIn() && isParty(get(claimPath(claimId)).data);
+        allow create: if verified()
+          && isParty(get(claimPath(claimId)).data)
+          && request.resource.data.senderId == uid()
+          && str(request.resource.data.text, 1, 1000);
+        allow update, delete: if false;
+      }
+    }
+
+    // Abuse reports: write-only for users, reviewed by moderators in console.
+    match /reports/{reportId} {
+      allow create: if verified() && request.resource.data.reporterId == uid();
+    }
+  }
+}
