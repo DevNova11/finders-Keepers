@@ -109,7 +109,8 @@ class _PendingTile extends ConsumerWidget {
         ),
         isThreeLine: p.attempts > 0,
         trailing: PopupMenuButton<String>(
-          onSelected: (v) => v == 'retry' ? outbox.flush() : outbox.discard(p.id),
+          onSelected: (v) =>
+              v == 'retry' ? outbox.flush() : outbox.discard(p.id),
           itemBuilder: (_) => const [
             PopupMenuItem(value: 'retry', child: Text('Retry now')),
             PopupMenuItem(value: 'discard', child: Text('Discard')),

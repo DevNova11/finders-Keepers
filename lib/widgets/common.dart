@@ -121,7 +121,11 @@ class ItemImage extends StatelessWidget {
         loadingBuilder: (c, child, p) => p == null ? child : placeholder,
       );
     }
-    return Image.file(File(u), fit: fit, errorBuilder: (_, _, _) => placeholder);
+    return Image.file(
+      File(u),
+      fit: fit,
+      errorBuilder: (_, _, _) => placeholder,
+    );
   }
 }
 
@@ -295,7 +299,12 @@ class InfoBox extends StatelessWidget {
   final IconData icon;
   final String text;
   final Color? color;
-  const InfoBox({super.key, required this.icon, required this.text, this.color});
+  const InfoBox({
+    super.key,
+    required this.icon,
+    required this.text,
+    this.color,
+  });
 
   @override
   Widget build(BuildContext context) {

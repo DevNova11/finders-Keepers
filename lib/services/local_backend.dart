@@ -46,6 +46,9 @@ class LocalBackend implements Backend {
   @override
   bool get isDemo => true;
 
+  @override
+  bool get supportsPhotoUpload => true;
+
   List<AppUser> get demoUsers => _users.values.toList();
 
   // ---- persistence ----
@@ -53,7 +56,8 @@ class LocalBackend implements Backend {
   Future<void> _load() async {
     if (await _file.exists()) {
       try {
-        final m = jsonDecode(await _file.readAsString()) as Map<String, dynamic>;
+        final m =
+            jsonDecode(await _file.readAsString()) as Map<String, dynamic>;
         for (final u in (m['users'] as List)) {
           final um = Map<String, dynamic>.from(u as Map);
           _users[um['uid']] = AppUser(
@@ -94,12 +98,14 @@ class LocalBackend implements Backend {
   Future<void> _save() async {
     final data = {
       'users': _users.values
-          .map((u) => {
-                'uid': u.uid,
-                'email': u.email,
-                'displayName': u.displayName,
-                'password': _passwords[u.uid],
-              })
+          .map(
+            (u) => {
+              'uid': u.uid,
+              'email': u.email,
+              'displayName': u.displayName,
+              'password': _passwords[u.uid],
+            },
+          )
           .toList(),
       'items': _items.values.map((e) => e.toMap()).toList(),
       'secrets': _secrets.map((k, v) => MapEntry(k, v.toMap())),
@@ -191,24 +197,73 @@ class LocalBackend implements Backend {
     }
 
     final seed = [
-      mk('seed_wallet', ItemType.found, 'Brown leather wallet',
-          'Found on a table near the window seats, second floor of the library.',
-          'wallet', 'brown', 3, 3, 'u_ben',
-          questions: ['What brand is the wallet?', 'Name one card (not cash) that is inside it.']),
-      mk('seed_earbuds', ItemType.lost, 'White wireless earbuds in case',
-          'Lost my white earbuds case, has a small blue sticker on the back.',
-          'earphones', 'white', 10, 20, 'u_asha'),
-      mk('seed_keys', ItemType.found, 'Bunch of 3 keys with red keychain',
-          'Three keys on a ring with a red plastic keychain, found by the bench.',
-          'keys', 'red', 12, 30, 'u_chen',
-          questions: ['How many keys are on the ring?', 'What shape is the keychain?']),
-      mk('seed_idcard', ItemType.found, 'Student ID card',
-          'Student ID card found at the main gate. Photo blurred for privacy.',
-          'id_card', 'blue', 0, 6, 'u_chen',
-          questions: ['What name is printed on the card?', 'What is your school / department?']),
-      mk('seed_bottle', ItemType.lost, 'Steel water bottle',
-          'Silver steel bottle with mountain stickers, left at the outdoor stadium.',
-          'bottle', 'silver', 13, 50, 'u_ben'),
+      mk(
+        'seed_wallet',
+        ItemType.found,
+        'Brown leather wallet',
+        'Found on a table near the window seats, second floor of the library.',
+        'wallet',
+        'brown',
+        3,
+        3,
+        'u_ben',
+        questions: [
+          'What brand is the wallet?',
+          'Name one card (not cash) that is inside it.',
+        ],
+      ),
+      mk(
+        'seed_earbuds',
+        ItemType.lost,
+        'White wireless earbuds in case',
+        'Lost my white earbuds case, has a small blue sticker on the back.',
+        'earphones',
+        'white',
+        10,
+        20,
+        'u_asha',
+      ),
+      mk(
+        'seed_keys',
+        ItemType.found,
+        'Bunch of 3 keys with red keychain',
+        'Three keys on a ring with a red plastic keychain, found by the bench.',
+        'keys',
+        'red',
+        12,
+        30,
+        'u_chen',
+        questions: [
+          'How many keys are on the ring?',
+          'What shape is the keychain?',
+        ],
+      ),
+      mk(
+        'seed_idcard',
+        ItemType.found,
+        'Student ID card',
+        'Student ID card found at the main gate. Photo blurred for privacy.',
+        'id_card',
+        'blue',
+        0,
+        6,
+        'u_chen',
+        questions: [
+          'What name is printed on the card?',
+          'What is your school / department?',
+        ],
+      ),
+      mk(
+        'seed_bottle',
+        ItemType.lost,
+        'Steel water bottle',
+        'Silver steel bottle with mountain stickers, left at the outdoor stadium.',
+        'bottle',
+        'silver',
+        13,
+        50,
+        'u_ben',
+      ),
     ];
     for (final i in seed) {
       _items[i.id] = i;
@@ -301,8 +356,9 @@ class LocalBackend implements Backend {
 
   @override
   Stream<List<Item>> watchRecentItems() => _watch(
-    () => _items.values.toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
+    () =>
+        _items.values.toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
   );
 
   @override
@@ -310,8 +366,9 @@ class LocalBackend implements Backend {
 
   @override
   Stream<List<Item>> watchItemsByReporter(String uid) => _watch(
-    () => _items.values.where((i) => i.reporterId == uid).toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
+    () =>
+        _items.values.where((i) => i.reporterId == uid).toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
   );
 
   @override
@@ -372,34 +429,39 @@ class LocalBackend implements Backend {
 
   @override
   Stream<List<Claim>> watchClaimsForItem(String itemId) => _watch(
-    () => _claims.values
-        .where((c) => c.itemId == itemId && c.itemReporterId == _currentUid)
-        .toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
+    () =>
+        _claims.values
+            .where((c) => c.itemId == itemId && c.itemReporterId == _currentUid)
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
   );
 
   @override
   Stream<List<Claim>> watchClaimsByClaimant(String uid) => _watch(
-    () => _claims.values.where((c) => c.claimantId == uid).toList()
-      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)),
+    () =>
+        _claims.values.where((c) => c.claimantId == uid).toList()
+          ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)),
   );
 
   @override
   Stream<List<Claim>> watchIncomingClaims(String reporterUid) => _watch(
-    () => _claims.values.where((c) => c.itemReporterId == reporterUid).toList()
-      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)),
+    () =>
+        _claims.values.where((c) => c.itemReporterId == reporterUid).toList()
+          ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)),
   );
 
   @override
   Stream<Claim?> watchClaim(String id) => _watch(() {
     final c = _claims[id];
     if (c == null) return null;
-    final allowed = c.claimantId == _currentUid || c.itemReporterId == _currentUid;
+    final allowed =
+        c.claimantId == _currentUid || c.itemReporterId == _currentUid;
     return allowed ? c : null;
   });
 
   @override
-  Future<bool> claimExists(String claimId) async => _claims.containsKey(claimId);
+  Future<bool> claimExists(String claimId) async =>
+      _claims.containsKey(claimId);
 
   @override
   Future<void> createClaim(Claim claim) async {
@@ -436,7 +498,9 @@ class LocalBackend implements Backend {
     _requireOnline();
     if (item.reporterId != _uid) throw StateError('permission-denied');
     for (final c in _claims.values.toList()) {
-      if (c.itemId == item.id && c.id != claim.id && c.status == ClaimStatus.pending) {
+      if (c.itemId == item.id &&
+          c.id != claim.id &&
+          c.status == ClaimStatus.pending) {
         _claims[c.id] = _updateClaim(
           c,
           status: ClaimStatus.rejected,
@@ -474,7 +538,11 @@ class LocalBackend implements Backend {
   @override
   Future<void> setHandoverHash(Claim claim, String hash, String salt) async {
     _requireOnline();
-    _claims[claim.id] = _updateClaim(_claims[claim.id]!, hash: hash, salt: salt);
+    _claims[claim.id] = _updateClaim(
+      _claims[claim.id]!,
+      hash: hash,
+      salt: salt,
+    );
     await _commit();
   }
 
@@ -493,7 +561,8 @@ class LocalBackend implements Backend {
     _requireOnline();
     final c = _claims[claim.id]!;
     if (c.handoverSalt == null ||
-        Verification.handoverHash(code, c.handoverSalt!) != c.handoverCodeHash) {
+        Verification.handoverHash(code, c.handoverSalt!) !=
+            c.handoverCodeHash) {
       throw WrongHandoverCode();
     }
     _claims[c.id] = _updateClaim(c, status: ClaimStatus.completed);

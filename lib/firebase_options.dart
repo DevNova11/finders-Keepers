@@ -19,19 +19,18 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'REPLACE_ME',
-    appId: 'REPLACE_ME',
-    messagingSenderId: 'REPLACE_ME',
-    projectId: 'REPLACE_ME',
-    storageBucket: 'REPLACE_ME',
+    apiKey: 'AIzaSyDYPPoI3ycY8pNH1dD4XRLuoqRDkwahCOg',
+    appId: '1:210305882359:android:d731b0b760a862704a1bf2',
+    messagingSenderId: '210305882359',
+    projectId: 'finders-keepers-9b78c',
+    storageBucket: 'finders-keepers-9b78c.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'REPLACE_ME',
-    appId: 'REPLACE_ME',
-    messagingSenderId: 'REPLACE_ME',
-    projectId: 'REPLACE_ME',
-    storageBucket: 'REPLACE_ME',
+    apiKey: 'AIzaSyBlCSpQU1HDHqIqduPqhBjepryRPvqpLQ4',
+    appId: '1:210305882359:ios:43d5a4b53202e7034a1bf2',
+    messagingSenderId: '210305882359',
+    projectId: 'finders-keepers-9b78c',
+    storageBucket: 'finders-keepers-9b78c.firebasestorage.app',
     iosBundleId: 'com.campus.finderskeepers.findersKeepers',
   );
 }

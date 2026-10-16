@@ -59,16 +59,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final user = ref.read(currentUserProvider)!;
     _text.clear();
     try {
-      await ref.read(backendProvider).sendMessage(
-        widget.claim.id,
-        ChatMessage(
-          id: const Uuid().v4(),
-          senderId: user.uid,
-          senderAlias: user.alias,
-          text: text,
-          createdAt: DateTime.now(),
-        ),
-      );
+      await ref
+          .read(backendProvider)
+          .sendMessage(
+            widget.claim.id,
+            ChatMessage(
+              id: const Uuid().v4(),
+              senderId: user.uid,
+              senderAlias: user.alias,
+              text: text,
+              createdAt: DateTime.now(),
+            ),
+          );
     } catch (e) {
       _text.text = text;
       if (mounted) showSnack(context, friendlyError(e), error: true);
@@ -115,8 +117,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       final m = messages[messages.length - 1 - i];
                       final mine = m.senderId == user.uid;
                       return Align(
-                        alignment:
-                            mine ? Alignment.centerRight : Alignment.centerLeft,
+                        alignment: mine
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
                         child: Container(
                           constraints: const BoxConstraints(maxWidth: 280),
                           margin: const EdgeInsets.symmetric(vertical: 4),

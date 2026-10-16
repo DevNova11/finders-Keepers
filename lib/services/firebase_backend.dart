@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
+import '../config/app_config.dart';
 import '../models/models.dart';
 import 'backend.dart';
 import 'verification.dart';
@@ -11,7 +12,7 @@ import 'verification.dart';
 class FirebaseBackend implements Backend {
   final _auth = FirebaseAuth.instance;
   final _db = FirebaseFirestore.instance;
-  final _storage = FirebaseStorage.instance;
+  late final _storage = FirebaseStorage.instance;
 
   FirebaseBackend() {
     // Offline-first: Firestore keeps a persistent local cache, serves reads
@@ -24,6 +25,9 @@ class FirebaseBackend implements Backend {
 
   @override
   bool get isDemo => false;
+
+  @override
+  bool get supportsPhotoUpload => AppConfig.uploadPhotosToFirebase;
 
   CollectionReference<Map<String, dynamic>> get _items =>
       _db.collection('items');
@@ -106,8 +110,11 @@ class FirebaseBackend implements Backend {
   Stream<List<Item>> watchItemsByReporter(String uid) => _items
       .where('reporterId', isEqualTo: uid)
       .snapshots()
-      .map((s) => _docs(s, Item.fromMap)
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
+      .map(
+        (s) =>
+            _docs(s, Item.fromMap)
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
+      );
 
   @override
   Stream<List<Item>> watchLinkedItems(String lostItemId) => _items
@@ -150,7 +157,11 @@ class FirebaseBackend implements Backend {
 
   @override
   Future<ItemSecret?> getSecret(String itemId) async {
-    final d = await _items.doc(itemId).collection('private').doc('secret').get();
+    final d = await _items
+        .doc(itemId)
+        .collection('private')
+        .doc('secret')
+        .get();
     return d.exists ? ItemSecret.fromMap(d.data()!) : null;
   }
 
@@ -184,22 +195,31 @@ class FirebaseBackend implements Backend {
       .where('itemId', isEqualTo: itemId)
       .where('itemReporterId', isEqualTo: _uid)
       .snapshots()
-      .map((s) => _docs(s, Claim.fromMap)
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
+      .map(
+        (s) =>
+            _docs(s, Claim.fromMap)
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
+      );
 
   @override
   Stream<List<Claim>> watchClaimsByClaimant(String uid) => _claims
       .where('claimantId', isEqualTo: uid)
       .snapshots()
-      .map((s) => _docs(s, Claim.fromMap)
-        ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)));
+      .map(
+        (s) =>
+            _docs(s, Claim.fromMap)
+              ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)),
+      );
 
   @override
   Stream<List<Claim>> watchIncomingClaims(String reporterUid) => _claims
       .where('itemReporterId', isEqualTo: reporterUid)
       .snapshots()
-      .map((s) => _docs(s, Claim.fromMap)
-        ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)));
+      .map(
+        (s) =>
+            _docs(s, Claim.fromMap)
+              ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)),
+      );
 
   @override
   Stream<Claim?> watchClaim(String id) => _claims

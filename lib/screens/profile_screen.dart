@@ -25,8 +25,10 @@ class ProfileScreen extends ConsumerWidget {
         const SizedBox(height: 16),
         CircleAvatar(
           radius: 36,
-          child: Text(user.displayName.isEmpty ? '?' : user.displayName[0],
-              style: const TextStyle(fontSize: 28)),
+          child: Text(
+            user.displayName.isEmpty ? '?' : user.displayName[0],
+            style: const TextStyle(fontSize: 28),
+          ),
         ),
         const SizedBox(height: 8),
         Center(
@@ -88,7 +90,9 @@ class ProfileScreen extends ConsumerWidget {
         const ListTile(
           leading: Icon(Icons.shield_outlined),
           title: Text('Your e-mail and full name are never shown'),
-          subtitle: Text('Listings use your alias; chats replace phone numbers.'),
+          subtitle: Text(
+            'Listings use your alias; chats replace phone numbers.',
+          ),
         ),
         const ListTile(
           leading: Icon(Icons.location_searching),

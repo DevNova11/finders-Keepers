@@ -35,7 +35,8 @@ class _ClaimScreenState extends ConsumerState<ClaimScreen> {
   void initState() {
     super.initState();
     _answers = [
-      for (final _ in widget.item.verificationQuestions) TextEditingController(),
+      for (final _ in widget.item.verificationQuestions)
+        TextEditingController(),
     ];
     _restoreDraft();
     for (final c in [..._answers, _description]) {
@@ -135,15 +136,17 @@ class _ClaimScreenState extends ConsumerState<ClaimScreen> {
         createdAt: now,
         updatedAt: now,
       );
-      await ref.read(outboxProvider.notifier).enqueue(
-        PendingSubmission(
-          id: id,
-          kind: SubmissionKind.claim,
-          payload: claim.toMap(),
-          localImages: images,
-          createdAt: now,
-        ),
-      );
+      await ref
+          .read(outboxProvider.notifier)
+          .enqueue(
+            PendingSubmission(
+              id: id,
+              kind: SubmissionKind.claim,
+              payload: claim.toMap(),
+              localImages: images,
+              createdAt: now,
+            ),
+          );
       await LocalStore.delete('drafts', _draftKey);
       if (!mounted) return;
       showSnack(
@@ -204,39 +207,44 @@ class _ClaimScreenState extends ConsumerState<ClaimScreen> {
                 maxLines: 4,
                 decoration: const InputDecoration(
                   labelText: 'Unique details not mentioned in the post',
-                  hintText:
-                      'Scratches, stickers, contents, when/where you last had it…',
+                  hintText: 'Scratches, stickers, contents, when/where you last had it…',
                 ),
                 validator: (v) => (v ?? '').trim().length < 15
                     ? 'Give at least a sentence of detail'
                     : null,
               ),
             ),
-            const SectionTitle('PROOF (OPTIONAL)'),
-            ListTile(
-              leading: _proofPath == null
-                  ? const Icon(Icons.add_photo_alternate_outlined)
-                  : ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: SizedBox(
-                        width: 48,
-                        height: 48,
-                        child: ItemImage(_proofPath),
+            if (ref.watch(backendProvider).supportsPhotoUpload) ...[
+              const SectionTitle('PROOF (OPTIONAL)'),
+              ListTile(
+                leading: _proofPath == null
+                    ? const Icon(Icons.add_photo_alternate_outlined)
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: ItemImage(_proofPath),
+                        ),
                       ),
-                    ),
-              title: Text(_proofPath == null ? 'Add a proof photo' : 'Proof photo added'),
-              subtitle: const Text(
-                'e.g. an older photo of you with it, the box, or a receipt. '
-                'Only the finder can see it.',
+                title: Text(
+                  _proofPath == null
+                      ? 'Add a proof photo'
+                      : 'Proof photo added',
+                ),
+                subtitle: const Text(
+                  'e.g. an older photo of you with it, the box, or a receipt. '
+                  'Only the finder can see it.',
+                ),
+                trailing: _proofPath == null
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => setState(() => _proofPath = null),
+                      ),
+                onTap: _pickProof,
               ),
-              trailing: _proofPath == null
-                  ? null
-                  : IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => setState(() => _proofPath = null),
-                    ),
-              onTap: _pickProof,
-            ),
+            ],
             if (myLost.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),

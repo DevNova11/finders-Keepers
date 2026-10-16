@@ -33,7 +33,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   Widget build(BuildContext context) {
     ref.watch(matchWatcherProvider);
     final pending = ref.watch(outboxProvider).length;
-    final incoming = ref
+    final incoming =
+        ref
             .watch(incomingClaimsProvider)
             .value
             ?.where((c) => c.status == ClaimStatus.pending)
@@ -123,7 +124,9 @@ Future<void> showReportChooser(BuildContext context) async {
               child: const Icon(Icons.volunteer_activism, color: Colors.white),
             ),
             title: const Text('I found something'),
-            subtitle: const Text('Set secret questions only the owner can answer'),
+            subtitle: const Text(
+              'Set secret questions only the owner can answer',
+            ),
             onTap: () => Navigator.pop(c, ItemType.found),
           ),
           const SizedBox(height: 12),

@@ -61,7 +61,10 @@ class _ItemView extends ConsumerWidget {
                 : _reportAbuse(context, ref),
             itemBuilder: (_) => [
               if (isMine && item.status.isOpen)
-                const PopupMenuItem(value: 'close', child: Text('Close report')),
+                const PopupMenuItem(
+                  value: 'close',
+                  child: Text('Close report'),
+                ),
               if (!isMine)
                 const PopupMenuItem(
                   value: 'abuse',
@@ -305,7 +308,9 @@ class _ItemView extends ConsumerWidget {
     if (reason == null || reason.isEmpty) return;
     try {
       await ref.read(backendProvider).reportAbuse(item.id, reason);
-      if (context.mounted) showSnack(context, 'Thanks — moderators will review it.');
+      if (context.mounted) {
+        showSnack(context, 'Thanks — moderators will review it.');
+      }
     } catch (e) {
       if (context.mounted) showSnack(context, friendlyError(e), error: true);
     }
@@ -419,9 +424,13 @@ class _Timeline extends StatelessWidget {
                       radius: 14,
                       backgroundColor: reached.contains(s)
                           ? s.color
-                          : Theme.of(context).colorScheme.surfaceContainerHighest,
+                          : Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
                       child: Icon(
-                        reached.contains(s) ? Icons.check : Icons.circle_outlined,
+                        reached.contains(s)
+                            ? Icons.check
+                            : Icons.circle_outlined,
                         size: 14,
                         color: Colors.white,
                       ),
@@ -480,7 +489,9 @@ class _PrivateDetails extends ConsumerWidget {
           ListTile(
             dense: true,
             leading: const Icon(Icons.lock_outline),
-            title: Text('${secret.answerHashes.length} secret answer(s) stored'),
+            title: Text(
+              '${secret.answerHashes.length} secret answer(s) stored',
+            ),
             subtitle: const Text(
               'Stored as salted hashes — not even shown to you again.',
             ),
@@ -504,7 +515,9 @@ class _ClaimsList extends ConsumerWidget {
         if (claims.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Text('No claims yet. You will be notified when someone claims it.'),
+            child: Text(
+              'No claims yet. You will be notified when someone claims it.',
+            ),
           ),
         for (final c in claims)
           Card(

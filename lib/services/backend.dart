@@ -21,6 +21,9 @@ class WrongHandoverCode implements Exception {
 abstract class Backend {
   bool get isDemo;
 
+  /// Whether photos can be uploaded (demo mode stores them on the device).
+  bool get supportsPhotoUpload;
+
   // ---- Auth ----
   Stream<AppUser?> authChanges();
   AppUser? get currentUser;

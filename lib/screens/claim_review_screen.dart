@@ -120,12 +120,17 @@ class _ClaimReviewScreenState extends ConsumerState<ClaimReviewScreen> {
         appBar: AppBar(),
         body: claimAsync.isLoading
             ? const Center(child: CircularProgressIndicator())
-            : const EmptyState(icon: Icons.lock_outline, title: 'Claim not available'),
+            : const EmptyState(
+                icon: Icons.lock_outline,
+                title: 'Claim not available',
+              ),
       );
     }
     final item = ref.watch(itemProvider(claim.itemId)).value;
     final secret = ref.watch(secretProvider(claim.itemId)).value;
-    final results = secret == null ? null : Verification.evaluate(claim, secret);
+    final results = secret == null
+        ? null
+        : Verification.evaluate(claim, secret);
     final score = secret == null ? null : Verification.score(claim, secret);
 
     return Scaffold(
@@ -193,7 +198,10 @@ class _ClaimReviewScreenState extends ConsumerState<ClaimReviewScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: SizedBox(height: 220, child: ItemImage(claim.proofImageUrl)),
+                child: SizedBox(
+                  height: 220,
+                  child: ItemImage(claim.proofImageUrl),
+                ),
               ),
             ),
           ],
@@ -333,10 +341,8 @@ class _ScoreCard extends StatelessWidget {
               children: [
                 Text(
                   '${(score * 100).round()}%',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(context).textTheme.headlineMedium
+                      ?.copyWith(color: color, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(width: 12),
                 Expanded(child: Text(label)),

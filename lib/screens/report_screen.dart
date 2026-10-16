@@ -119,7 +119,8 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
       _images
         ..clear()
         ..addAll(
-          List<String>.from(d['images'] ?? []).where((p) => File(p).existsSync()),
+          List<String>.from(d['images'] ?? [])
+              .where((p) => File(p).existsSync()),
         );
       final qs = List.from(d['questions'] ?? []);
       if (qs.isNotEmpty) {
@@ -233,16 +234,18 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
       final nearest = AppConfig.landmarks.reduce(
         (a, b) =>
             const Distance().distance(a.position, here) <
-                    const Distance().distance(b.position, here)
-                ? a
-                : b,
+                const Distance().distance(b.position, here)
+            ? a
+            : b,
       );
       _update(() {
         _point = here;
         _locationName = 'Near ${nearest.name}';
       });
     } catch (e) {
-      if (mounted) showSnack(context, 'Could not get location: $e', error: true);
+      if (mounted) {
+        showSnack(context, 'Could not get location: $e', error: true);
+      }
     }
   }
 
@@ -331,16 +334,18 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
         privateNotes: _notes.text.trim(),
       );
 
-      await ref.read(outboxProvider.notifier).enqueue(
-        PendingSubmission(
-          id: id,
-          kind: SubmissionKind.item,
-          payload: item.toMap(),
-          secret: secret.toMap(),
-          localImages: processed,
-          createdAt: now,
-        ),
-      );
+      await ref
+          .read(outboxProvider.notifier)
+          .enqueue(
+            PendingSubmission(
+              id: id,
+              kind: SubmissionKind.item,
+              payload: item.toMap(),
+              secret: secret.toMap(),
+              localImages: processed,
+              createdAt: now,
+            ),
+          );
       await LocalStore.delete('drafts', _draftKey);
       for (final p in _images) {
         try {
@@ -456,6 +461,13 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
               ),
             ),
             const SectionTitle('PHOTOS'),
+            if (!ref.watch(backendProvider).supportsPhotoUpload)
+              const InfoBox(
+                icon: Icons.image_search,
+                text:
+                    'Photos stay on your phone. Only an anonymous image '
+                    'fingerprint is shared, used to find matching reports.',
+              ),
             if (_isFound && cat.sensitive)
               const InfoBox(
                 icon: Icons.privacy_tip_outlined,
@@ -530,7 +542,8 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
             const SectionTitle('WHERE & WHEN'),
             _pad(
               DropdownButtonFormField<String>(
-                initialValue: AppConfig.landmarks.any((l) => l.name == _locationName)
+                initialValue:
+                    AppConfig.landmarks.any((l) => l.name == _locationName)
                     ? _locationName
                     : null,
                 isExpanded: true,
@@ -607,7 +620,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.schedule),
-              title: Text(_isFound ? 'When did you find it?' : 'When did you lose it?'),
+              title: Text(
+                _isFound ? 'When did you find it?' : 'When did you lose it?',
+              ),
               subtitle: Text(formatDateTime(_occurredAt)),
               trailing: const Icon(Icons.edit_calendar),
               onTap: _pickDateTime,

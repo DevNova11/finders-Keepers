@@ -44,7 +44,12 @@ class ImageProcessing {
   /// Difference hash: shrink to 9x8 grayscale, compare adjacent pixels.
   static String dHash(img.Image image) {
     final small = img.grayscale(
-      img.copyResize(image, width: 9, height: 8, interpolation: img.Interpolation.average),
+      img.copyResize(
+        image,
+        width: 9,
+        height: 8,
+        interpolation: img.Interpolation.average,
+      ),
     );
     var bits = BigInt.zero;
     for (var y = 0; y < 8; y++) {

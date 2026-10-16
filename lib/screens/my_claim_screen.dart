@@ -136,7 +136,11 @@ class _MyClaimScreenState extends ConsumerState<MyClaimScreen> {
           ..._statusBody(claim),
           const SectionTitle('YOUR ANSWERS'),
           for (final a in claim.answers)
-            ListTile(dense: true, leading: const Icon(Icons.short_text), title: Text(a)),
+            ListTile(
+              dense: true,
+              leading: const Icon(Icons.short_text),
+              title: Text(a),
+            ),
           const SectionTitle('YOUR DESCRIPTION'),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -191,10 +195,11 @@ class _MyClaimScreenState extends ConsumerState<MyClaimScreen> {
                   ? const CircularProgressIndicator()
                   : SelectableText(
                       _code!,
-                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                        letterSpacing: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.displayMedium
+                          ?.copyWith(
+                            letterSpacing: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
               const SizedBox(height: 8),
               const Text(

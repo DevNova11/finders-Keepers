@@ -169,9 +169,12 @@ class Outbox extends Notifier<List<PendingSubmission>> {
   Future<void> _process(PendingSubmission s) async {
     var current = s;
     try {
-      // 1. Upload images not yet uploaded (resumable).
+      // 1. Upload images not yet uploaded (resumable). Skipped when the
+      //    backend has no photo storage: the dHash fingerprints are already
+      //    in the payload, so image matching still works.
+      final upload = _backend.supportsPhotoUpload;
       final urls = Map<String, String>.from(current.uploadedUrls);
-      for (var i = 0; i < current.localImages.length; i++) {
+      for (var i = 0; upload && i < current.localImages.length; i++) {
         if (urls.containsKey('$i')) continue;
         final bytes = await File(current.localImages[i]).readAsBytes();
         final path = current.kind == SubmissionKind.item
@@ -185,7 +188,8 @@ class Outbox extends Notifier<List<PendingSubmission>> {
         await _persist();
       }
       final ordered = [
-        for (var i = 0; i < current.localImages.length; i++) urls['$i']!,
+        if (upload)
+          for (var i = 0; i < current.localImages.length; i++) urls['$i']!,
       ];
 
       // 2. Write the document. Ids are client-generated → idempotent.

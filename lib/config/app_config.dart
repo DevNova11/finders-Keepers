@@ -14,7 +14,10 @@ class AppConfig {
   /// Only e-mail addresses on these domains may register (empty = allow all).
   /// Restricting sign-up to campus e-mail is the first anti-fraud layer:
   /// every claimant is a traceable member of the campus.
-  static const allowedEmailDomains = <String>['vitstudent.ac.in', 'vit.ac.in'];
+  ///
+  /// TESTING: open to any e-mail. Before submission restore:
+  ///   <String>['vitstudent.ac.in', 'vit.ac.in']
+  static const allowedEmailDomains = <String>[];
 
   /// Firebase mode requires a verified campus e-mail before posting/claiming.
   static const requireEmailVerification = true;
@@ -49,6 +52,12 @@ class AppConfig {
     Landmark("Ladies' Hostel (LH)", LatLng(12.97095, 79.16068)),
     Landmark('Health Centre', LatLng(12.96950, 79.15465)),
   ];
+
+  /// Firebase Storage needs the paid Blaze plan for new projects. With this
+  /// off, photos are still processed on the device (EXIF strip, blur, dHash
+  /// fingerprint for image matching) but never uploaded; only the hash is
+  /// stored. Set to true after upgrading to Blaze and enabling Storage.
+  static const uploadPhotosToFirebase = false;
 
   /// Safe, public handover point recommended to both parties.
   static const recommendedHandoverPoint = 'VIT Main Gate security desk';

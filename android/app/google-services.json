@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "210305882359",
+    "project_id": "finders-keepers-9b78c",
+    "storage_bucket": "finders-keepers-9b78c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:210305882359:android:d731b0b760a862704a1bf2",
+        "android_client_info": {
+          "package_name": "com.campus.finderskeepers.finders_keepers"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDYPPoI3ycY8pNH1dD4XRLuoqRDkwahCOg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

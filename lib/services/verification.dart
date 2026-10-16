@@ -35,13 +35,12 @@ class Verification {
       sha256.convert(utf8.encode('$salt|${normalize(answer)}')).toString();
 
   /// The finder may enter alternatives separated by `|`, e.g. "black|dark grey".
-  static List<String> hashAlternatives(String expected, String salt) =>
-      expected
-          .split('|')
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty)
-          .map((e) => hash(e, salt))
-          .toList();
+  static List<String> hashAlternatives(String expected, String salt) => expected
+      .split('|')
+      .map((e) => e.trim())
+      .where((e) => e.isNotEmpty)
+      .map((e) => hash(e, salt))
+      .toList();
 
   static ItemSecret buildSecret({
     required List<String> expectedAnswers,

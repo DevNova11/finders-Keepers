@@ -100,7 +100,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         backend: backend,
                         busy: _busy,
                         onPick: (email) => _run(
-                          () => backend.signIn(email, LocalBackend.demoPassword),
+                          () =>
+                              backend.signIn(email, LocalBackend.demoPassword),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -151,9 +152,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         labelText: 'Password',
                         prefixIcon: Icon(Icons.lock_outline),
                       ),
-                      validator: (v) => (v ?? '').length < 6
-                          ? 'At least 6 characters'
-                          : null,
+                      validator: (v) =>
+                          (v ?? '').length < 6 ? 'At least 6 characters' : null,
                       onFieldSubmitted: (_) => _submit(),
                     ),
                     const SizedBox(height: 20),
@@ -165,7 +165,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : Text(_register ? 'Create account' : 'Sign in'),
                       ),

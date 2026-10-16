@@ -87,7 +87,10 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                   segments: const [
                     ButtonSegment(value: TypeFilter.all, label: Text('All')),
                     ButtonSegment(value: TypeFilter.lost, label: Text('Lost')),
-                    ButtonSegment(value: TypeFilter.found, label: Text('Found')),
+                    ButtonSegment(
+                      value: TypeFilter.found,
+                      label: Text('Found'),
+                    ),
                   ],
                   selected: {_type},
                   onSelectionChanged: (s) => setState(() => _type = s.first),

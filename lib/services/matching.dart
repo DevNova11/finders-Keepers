@@ -7,8 +7,28 @@ import '../models/models.dart';
 import 'image_processing.dart';
 
 const _stopWords = {
-  'the', 'a', 'an', 'and', 'or', 'of', 'in', 'on', 'at', 'to', 'my', 'is',
-  'it', 'with', 'for', 'near', 'lost', 'found', 'was', 'i', 'this', 'that',
+  'the',
+  'a',
+  'an',
+  'and',
+  'or',
+  'of',
+  'in',
+  'on',
+  'at',
+  'to',
+  'my',
+  'is',
+  'it',
+  'with',
+  'for',
+  'near',
+  'lost',
+  'found',
+  'was',
+  'i',
+  'this',
+  'that',
 };
 
 /// Search tokens stored on each item (`keywords` array) so Firestore can
@@ -92,15 +112,18 @@ MatchResult scoreMatch(Item a, Item b) {
 
 /// Open items of the opposite type, ranked by match score.
 List<MatchResult> findMatches(Item item, Iterable<Item> candidates) {
-  final results = candidates
-      .where((c) =>
-          c.id != item.id &&
-          c.type != item.type &&
-          c.status.isOpen &&
-          c.reporterId != item.reporterId)
-      .map((c) => scoreMatch(item, c))
-      .where((m) => m.score >= AppConfig.matchThreshold)
-      .toList()
-    ..sort((x, y) => y.score.compareTo(x.score));
+  final results =
+      candidates
+          .where(
+            (c) =>
+                c.id != item.id &&
+                c.type != item.type &&
+                c.status.isOpen &&
+                c.reporterId != item.reporterId,
+          )
+          .map((c) => scoreMatch(item, c))
+          .where((m) => m.score >= AppConfig.matchThreshold)
+          .toList()
+        ..sort((x, y) => y.score.compareTo(x.score));
   return results.take(5).toList();
 }

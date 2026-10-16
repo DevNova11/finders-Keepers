@@ -14,9 +14,8 @@ TileLayer osmTiles() => TileLayer(
   userAgentPackageName: 'com.campus.finderskeepers',
 );
 
-Widget osmAttribution() => const SimpleAttributionWidget(
-  source: Text('OpenStreetMap contributors'),
-);
+Widget osmAttribution() =>
+    const SimpleAttributionWidget(source: Text('OpenStreetMap contributors'));
 
 /// Map of open items. Markers sit on the *approximate* (grid-snapped)
 /// location with a translucent radius, so the exact spot is never revealed.
