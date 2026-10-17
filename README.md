@@ -1,5 +1,9 @@
 # Finders Keepers? — VIT Vellore Lost & Found
 
+**▶ [Demo video](https://drive.google.com/file/d/1y1VixuSLc7D6gzmhPM_YbD6Z9WR3pedv/view?usp=drive_link)** ·
+**⬇ [Download APK](https://github.com/DevNova11/finders-Keepers/releases/tag/v1.1.0)** ·
+**🗂 [Database & workflow](docs/DATABASE_AND_WORKFLOW.md)**
+
 A Flutter app that connects people who lost items on campus with people who
 found them. It uses a **verified ownership-claim + handover-code** process to
 stop fraudulent claims, and keeps personal data private throughout.
