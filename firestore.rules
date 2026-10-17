@@ -8,13 +8,23 @@ rules_version = '2';
 //  * one claim per user per item (deterministic id) → answers can't be brute-forced
 //  * item state machine: found → claimed → returned only through an approved
 //    claim, and "returned" only after the handover code hash matches
+//  * moderators (admins/{uid}, created in the console) review reports, hide
+//    posts and suspend accounts; suspended accounts can no longer write
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function signedIn() { return request.auth != null; }
     function uid() { return request.auth.uid; }
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(uid()));
+    }
+    function notSuspended() {
+      return !exists(/databases/$(database)/documents/suspended/$(uid()));
+    }
     function verified() {
-      return signedIn() && request.auth.token.email_verified == true;
+      return signedIn() && request.auth.token.email_verified == true
+        && notSuspended();
     }
     function changedOnly(keys) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
@@ -39,11 +49,16 @@ service cloud.firestore {
         && ((request.resource.data.type == 'lost' && request.resource.data.status == 'lost')
             || (request.resource.data.type == 'found' && request.resource.data.status == 'found'))
         && request.resource.data.approvedClaimId == null
+        && request.resource.data.get('hidden', false) == false
         && str(request.resource.data.title, 3, 100)
         && str(request.resource.data.description, 5, 1000)
         && request.resource.data.imageUrls.size() <= 3
         && request.resource.data.verificationQuestions.size() <= 3
         && request.resource.data.createdAt == request.time;
+
+      // Moderators may only hide/restore a post and leave a note.
+      allow update: if isAdmin()
+        && changedOnly(['hidden', 'moderationNote', 'updatedAt']);
 
       allow update: if verified()
         && resource.data.reporterId == uid()
@@ -156,9 +171,28 @@ service cloud.firestore {
       }
     }
 
-    // Abuse reports: write-only for users, reviewed by moderators in console.
+    // Abuse reports: write-only for users, reviewed in the moderation dashboard.
     match /reports/{reportId} {
-      allow create: if verified() && request.resource.data.reporterId == uid();
+      allow create: if verified()
+        && request.resource.data.reporterId == uid()
+        && request.resource.data.status == 'open'
+        && str(request.resource.data.reason, 1, 500);
+      allow read: if isAdmin();
+      allow update: if isAdmin()
+        && changedOnly(['status', 'resolution', 'resolvedBy', 'resolvedAt'])
+        && request.resource.data.status in ['dismissed', 'actioned'];
+    }
+
+    // Moderator list. Managed only from the Firebase console.
+    match /admins/{userId} {
+      allow read: if signedIn() && uid() == userId;
+      allow write: if false;
+    }
+
+    // Suspended accounts. Users can see their own status.
+    match /suspended/{userId} {
+      allow read: if signedIn() && (uid() == userId || isAdmin());
+      allow write: if isAdmin() && userId != uid();
     }
   }
 }

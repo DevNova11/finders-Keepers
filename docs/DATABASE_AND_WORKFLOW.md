@@ -21,6 +21,7 @@ items/{itemId}                           (any signed-in user can read)
 │   linkedItemId                         ← found report answering a lost report
 │   approvedClaimId                      ← set when a claim is approved
 │   history[] {status, at, note}         ← audit trail shown as a timeline
+│   hidden, moderationNote               ← set by moderators only
 └── private/secret                       (reporter only)
         answerHashes {"0": [sha256…], "1": […]}, salt
         exactLat, exactLng, privateNotes
@@ -38,11 +39,22 @@ claims/{itemId}_{claimantUid}            (claimant + item reporter only)
 └── messages/{messageId}                 (claimant + item reporter only)
         senderId, senderAlias, text, createdAt
 
-reports/{id}                             (create-only; moderators read in console)
-        itemId, reporterId, reason, createdAt
+reports/{id}                             (create: any verified user; read/resolve: moderators)
+        itemId, itemTitle, itemReporterId, itemReporterAlias
+        reporterId, reason, createdAt
+        status: open|dismissed|actioned, resolution, resolvedBy, resolvedAt
+
+admins/{uid}                             (created in the Firebase console only)
+        any fields, e.g. name             ← existence = moderator
+
+suspended/{uid}                          (written by moderators; user can read own)
+        reason, by, at                   ← all writes from this uid are rejected
 ```
 
-### Firebase Storage
+### Firebase Storage (Blaze plan only)
+
+On the free Spark plan photos are not uploaded: only their 64-bit dHash
+fingerprints (`imageHashes`) are stored, which keeps image matching working.
 
 ```
 items/{itemId}/{n}.jpg        any signed-in user can read; only the reporter can overwrite

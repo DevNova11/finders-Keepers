@@ -178,13 +178,76 @@ class FirebaseBackend implements Backend {
       _items.doc(item.id).update(_statusUpdate(status, note));
 
   @override
-  Future<void> reportAbuse(String itemId, String reason) =>
-      _db.collection('reports').add({
-        'itemId': itemId,
-        'reporterId': _uid,
-        'reason': reason,
-        'createdAt': FieldValue.serverTimestamp(),
+  Future<void> reportAbuse(Item item, String reason) {
+    final ref = _db.collection('reports').doc();
+    return ref.set({
+      ...AbuseReport(
+        id: ref.id,
+        itemId: item.id,
+        itemTitle: item.title,
+        itemReporterId: item.reporterId,
+        itemReporterAlias: item.reporterAlias,
+        reporterId: _uid,
+        reason: reason,
+        status: ReportStatus.open,
+        createdAt: DateTime.now(),
+      ).toMap(),
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // ---- Moderation ----
+
+  Stream<bool> _exists(String collection) {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return Stream.value(false);
+    return _db
+        .collection(collection)
+        .doc(uid)
+        .snapshots()
+        .map((d) => d.exists)
+        .handleError((_) => false);
+  }
+
+  @override
+  Stream<bool> watchIsAdmin() => _exists('admins');
+
+  @override
+  Stream<bool> watchIsSuspended() => _exists('suspended');
+
+  @override
+  Stream<List<AbuseReport>> watchReports() => _db
+      .collection('reports')
+      .orderBy('createdAt', descending: true)
+      .limit(200)
+      .snapshots()
+      .map((s) => _docs(s, AbuseReport.fromMap));
+
+  @override
+  Future<void> resolveReport(
+    AbuseReport report,
+    ReportStatus status,
+    String resolution,
+  ) => _db.collection('reports').doc(report.id).update({
+    'status': status.name,
+    'resolution': resolution,
+    'resolvedBy': _uid,
+    'resolvedAt': FieldValue.serverTimestamp(),
+  });
+
+  @override
+  Future<void> moderateItem(Item item, {required bool hidden, String? note}) =>
+      _items.doc(item.id).update({
+        'hidden': hidden,
+        'moderationNote': note,
+        'updatedAt': FieldValue.serverTimestamp(),
       });
+
+  @override
+  Future<void> suspendUser(String uid, String reason) => _db
+      .collection('suspended')
+      .doc(uid)
+      .set({'reason': reason, 'by': _uid, 'at': FieldValue.serverTimestamp()});
 
   // ---- Claims ----
   // Every query includes the field the security rules check, otherwise

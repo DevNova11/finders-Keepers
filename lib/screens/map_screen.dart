@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import '../config/app_config.dart';
 import '../models/models.dart';
 import '../providers.dart';
+import '../services/location.dart';
 import '../widgets/common.dart';
 import 'browse_screen.dart';
 
@@ -33,6 +34,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Widget build(BuildContext context) {
     final all = ref.watch(recentItemsProvider).value ?? const <Item>[];
     final items = filterItems(all, type: _type);
+    final me = ref.watch(userLocationProvider);
     return Stack(
       children: [
         FlutterMap(
@@ -76,6 +78,23 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   ),
               ],
             ),
+            if (me.status == LocationStatus.onCampus)
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: me.point!,
+                    width: 22,
+                    height: 22,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 3),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             osmAttribution(),
           ],
         ),

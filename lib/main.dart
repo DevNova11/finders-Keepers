@@ -16,7 +16,10 @@ Future<void> main() async {
 
   Backend backend;
   final options = DefaultFirebaseOptions.currentPlatform;
-  if (options.apiKey.startsWith('REPLACE')) {
+  // `flutter build apk --dart-define=DEMO=true` forces the on-device demo
+  // backend (sample accounts, no sign-up) even when Firebase is configured.
+  const forceDemo = bool.fromEnvironment('DEMO');
+  if (forceDemo || options.apiKey.startsWith('REPLACE')) {
     backend = await LocalBackend.open();
   } else {
     try {

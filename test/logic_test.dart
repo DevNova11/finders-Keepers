@@ -5,6 +5,7 @@ import 'package:finders_keepers/services/matching.dart';
 import 'package:finders_keepers/services/verification.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
+import 'package:latlong2/latlong.dart';
 
 Item _item(
   String id,
@@ -27,7 +28,8 @@ Item _item(
     description: desc,
     category: category,
     color: color,
-    status: status ?? (type == ItemType.lost ? ItemStatus.lost : ItemStatus.found),
+    status:
+        status ?? (type == ItemType.lost ? ItemStatus.lost : ItemStatus.found),
     locationName: 'Main Library',
     lat: lat,
     lng: lng,
@@ -68,12 +70,18 @@ void main() {
     });
 
     test('normalisation tolerates case, punctuation and articles', () {
-      expect(Verification.score(_claim(['  the WOODLAND!! ', 'Three']), secret), 1.0);
+      expect(
+        Verification.score(_claim(['  the WOODLAND!! ', 'Three']), secret),
+        1.0,
+      );
     });
 
     test('wrong answers lower the score', () {
       expect(Verification.score(_claim(['Nike', '3']), secret), 0.5);
-      expect(Verification.evaluate(_claim(['Nike', '4']), secret), [false, false]);
+      expect(Verification.evaluate(_claim(['Nike', '4']), secret), [
+        false,
+        false,
+      ]);
     });
 
     test('salt makes identical answers hash differently per item', () {
@@ -140,12 +148,34 @@ void main() {
     });
 
     test('identical photos boost the score', () {
-      final lost = _item('l', ItemType.lost, title: 'thing', desc: 'item',
-          category: 'other', color: '', hashes: ['ffff0000ffff0000']);
-      final withPhoto = _item('f', ItemType.found, title: 'object', desc: 'misc',
-          category: 'bag', color: '', reporter: 'u2', hashes: ['ffff0000ffff0000']);
-      final noPhoto = _item('g', ItemType.found, title: 'object', desc: 'misc',
-          category: 'bag', color: '', reporter: 'u2');
+      final lost = _item(
+        'l',
+        ItemType.lost,
+        title: 'thing',
+        desc: 'item',
+        category: 'other',
+        color: '',
+        hashes: ['ffff0000ffff0000'],
+      );
+      final withPhoto = _item(
+        'f',
+        ItemType.found,
+        title: 'object',
+        desc: 'misc',
+        category: 'bag',
+        color: '',
+        reporter: 'u2',
+        hashes: ['ffff0000ffff0000'],
+      );
+      final noPhoto = _item(
+        'g',
+        ItemType.found,
+        title: 'object',
+        desc: 'misc',
+        category: 'bag',
+        color: '',
+        reporter: 'u2',
+      );
       expect(
         scoreMatch(lost, withPhoto).score - scoreMatch(lost, noPhoto).score,
         closeTo(0.25, 0.001),
@@ -185,9 +215,20 @@ void main() {
   group('Search', () {
     final items = [
       _item('1', ItemType.lost),
-      _item('2', ItemType.found, title: 'Red keys', desc: 'keychain',
-          category: 'keys', color: 'red'),
-      _item('3', ItemType.found, title: 'Old wallet', status: ItemStatus.returned),
+      _item(
+        '2',
+        ItemType.found,
+        title: 'Red keys',
+        desc: 'keychain',
+        category: 'keys',
+        color: 'red',
+      ),
+      _item(
+        '3',
+        ItemType.found,
+        title: 'Old wallet',
+        status: ItemStatus.returned,
+      ),
     ];
 
     test('free-text search matches title, description and prefixes', () {
@@ -196,9 +237,122 @@ void main() {
     });
 
     test('type, category and resolved filters', () {
-      expect(filterItems(items, type: TypeFilter.found).map((i) => i.id), ['2']);
+      expect(filterItems(items, type: TypeFilter.found).map((i) => i.id), [
+        '2',
+      ]);
       expect(filterItems(items, category: 'keys').map((i) => i.id), ['2']);
       expect(filterItems(items, includeResolved: true), hasLength(3));
+    });
+  });
+
+  group('Near-you recommendations', () {
+    const here = LatLng(13.0115, 80.2360);
+
+    test('only nearby open items by others, nearest first', () {
+      final near = _item(
+        'n',
+        ItemType.found,
+        title: 'Umbrella',
+        desc: 'blue',
+        category: 'other',
+        reporter: 'u2',
+        lat: 13.0116,
+        lng: 80.2361,
+      );
+      final farther = _item(
+        'm',
+        ItemType.found,
+        title: 'Bottle',
+        desc: 'steel',
+        category: 'bottle',
+        reporter: 'u2',
+        lat: 13.0150,
+        lng: 80.2360,
+      );
+      final tooFar = _item('x', ItemType.found, reporter: 'u2', lat: 13.05);
+      final returned = _item(
+        'r',
+        ItemType.found,
+        reporter: 'u2',
+        status: ItemStatus.returned,
+      );
+      final own = _item('o', ItemType.found, reporter: 'me');
+      final recs = recommendNearby(
+        [farther, near, tooFar, returned, own],
+        here,
+        uid: 'me',
+      );
+      expect(recs.map((r) => r.item.id), ['n', 'm']);
+      expect(recs.first.metres, lessThan(50));
+    });
+
+    test('items relevant to my lost report are ranked first', () {
+      final myLost = _item('l', ItemType.lost, reporter: 'me');
+      final closeUnrelated = _item(
+        'u',
+        ItemType.found,
+        title: 'Umbrella',
+        desc: 'blue',
+        category: 'other',
+        reporter: 'u2',
+        lat: 13.0115,
+      );
+      final fartherWallet = _item(
+        'w',
+        ItemType.found,
+        reporter: 'u2',
+        lat: 13.0140,
+      );
+      final recs = recommendNearby(
+        [closeUnrelated, fartherWallet, myLost],
+        here,
+        uid: 'me',
+      );
+      expect(recs.first.item.id, 'w');
+      expect(recs.first.reason, contains('Black wallet'));
+      expect(recs[1].reason, isNull);
+    });
+
+    test('hidden (moderated) posts are never recommended', () {
+      final hidden = _item(
+        'h',
+        ItemType.found,
+        reporter: 'u2',
+      ).copyWith(hidden: true);
+      expect(recommendNearby([hidden], here, uid: 'me'), isEmpty);
+    });
+
+    test('distance formatting', () {
+      expect(formatDistance(123), '120 m');
+      expect(formatDistance(2340), '2.3 km');
+    });
+  });
+
+  group('Moderation model', () {
+    test('report round-trips through a map', () {
+      final r = AbuseReport(
+        id: 'r1',
+        itemId: 'i1',
+        itemTitle: 'Scam post',
+        itemReporterId: 'u9',
+        itemReporterAlias: 'Sam S.',
+        reporterId: 'u1',
+        reason: 'asks for money',
+        status: ReportStatus.open,
+        createdAt: DateTime(2026, 10, 1),
+      );
+      final back = AbuseReport.fromMap(r.toMap());
+      expect(back.status, ReportStatus.open);
+      expect(back.itemReporterId, 'u9');
+    });
+
+    test('hidden flag survives serialisation and defaults to false', () {
+      final i = _item('i', ItemType.found);
+      expect(Item.fromMap(i.toMap()).hidden, isFalse);
+      final h = i.copyWith(hidden: true, moderationNote: 'spam');
+      final back = Item.fromMap(h.toMap());
+      expect(back.hidden, isTrue);
+      expect(back.moderationNote, 'spam');
     });
   });
 }

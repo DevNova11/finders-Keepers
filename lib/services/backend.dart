@@ -47,7 +47,7 @@ abstract class Backend {
   Future<void> createItem(Item item, ItemSecret? secret);
   Future<ItemSecret?> getSecret(String itemId);
   Future<void> setItemStatus(Item item, ItemStatus status, String note);
-  Future<void> reportAbuse(String itemId, String reason);
+  Future<void> reportAbuse(Item item, String reason);
 
   // ---- Claims ----
   Stream<List<Claim>> watchClaimsForItem(String itemId);
@@ -72,6 +72,23 @@ abstract class Backend {
   // ---- Messages ----
   Stream<List<ChatMessage>> watchMessages(String claimId);
   Future<void> sendMessage(String claimId, ChatMessage message);
+
+  // ---- Moderation ----
+  /// True when the signed-in user has a document in `admins/{uid}`.
+  Stream<bool> watchIsAdmin();
+
+  /// True when a moderator has suspended the signed-in user.
+  Stream<bool> watchIsSuspended();
+  Stream<List<AbuseReport>> watchReports();
+  Future<void> resolveReport(
+    AbuseReport report,
+    ReportStatus status,
+    String resolution,
+  );
+
+  /// Hides (or restores) a post from listings, with a note to its reporter.
+  Future<void> moderateItem(Item item, {required bool hidden, String? note});
+  Future<void> suspendUser(String uid, String reason);
 
   // ---- Notifications ----
   Future<void> saveFcmToken(String token);

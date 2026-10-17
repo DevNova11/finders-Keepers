@@ -30,6 +30,9 @@ class LocalBackend implements Backend {
   final Map<String, Claim> _claims = {};
   final Map<String, List<ChatMessage>> _messages = {};
   final Map<String, String> _handoverCodes = {};
+  final Map<String, AbuseReport> _reports = {};
+  final Map<String, String> _suspended = {};
+  static const _admins = {'u_admin'};
   String? _currentUid;
 
   bool simulateOffline = false;
@@ -38,7 +41,7 @@ class LocalBackend implements Backend {
 
   static Future<LocalBackend> open() async {
     final dir = await getApplicationDocumentsDirectory();
-    final b = LocalBackend._(File('${dir.path}/demo_db_vit.json'));
+    final b = LocalBackend._(File('${dir.path}/demo_db_vit2.json'));
     await b._load();
     return b;
   }
@@ -85,6 +88,13 @@ class LocalBackend implements Backend {
               .toList();
         });
         (m['handoverCodes'] as Map).forEach((k, v) => _handoverCodes[k] = v);
+        for (final r in (m['reports'] as List? ?? [])) {
+          final rep = AbuseReport.fromMap(Map<String, dynamic>.from(r as Map));
+          _reports[rep.id] = rep;
+        }
+        (m['suspended'] as Map? ?? {}).forEach(
+          (k, v) => _suspended[k as String] = v as String,
+        );
         _currentUid = m['currentUid'] as String?;
         return;
       } catch (_) {
@@ -114,6 +124,8 @@ class LocalBackend implements Backend {
         (k, v) => MapEntry(k, v.map((e) => e.toMap()).toList()),
       ),
       'handoverCodes': _handoverCodes,
+      'reports': _reports.values.map((e) => e.toMap()).toList(),
+      'suspended': _suspended,
       'currentUid': _currentUid,
     };
     final json = jsonEncode(
@@ -133,6 +145,13 @@ class LocalBackend implements Backend {
 
   void _requireOnline() {
     if (simulateOffline) throw const NetworkUnavailable('Simulated offline');
+    if (_suspended.containsKey(_currentUid)) {
+      throw StateError('permission-denied: account suspended');
+    }
+  }
+
+  void _requireAdmin() {
+    if (!_admins.contains(_currentUid)) throw StateError('permission-denied');
   }
 
   Stream<T> _watch<T>(T Function() compute) async* {
@@ -148,6 +167,8 @@ class LocalBackend implements Backend {
       ('u_asha', 'Asha Raman', 'asha.raman2024@vitstudent.ac.in'),
       ('u_ben', 'Ben Thomas', 'ben.thomas2024@vitstudent.ac.in'),
       ('u_chen', 'Chen Li', 'chen.li2024@vitstudent.ac.in'),
+      ('u_admin', 'Campus Moderator', 'lostfound.admin@vit.ac.in'),
+      ('u_spam', 'Sam Spammer', 'sam.spam2024@vitstudent.ac.in'),
     ];
     for (final (uid, name, email) in users) {
       _users[uid] = AppUser(
@@ -268,6 +289,30 @@ class LocalBackend implements Backend {
     for (final i in seed) {
       _items[i.id] = i;
     }
+    // A suspicious post with an open abuse report, for the moderation demo.
+    final spam = mk(
+      'seed_spam',
+      ItemType.found,
+      'Found iPhone 16 - pay Rs 500 to collect',
+      'Found an iPhone near SJT. Send Rs 500 on UPI first and I will hand it over.',
+      'phone',
+      'black',
+      8,
+      2,
+      'u_spam',
+    );
+    _items[spam.id] = spam;
+    _reports['seed_report'] = AbuseReport(
+      id: 'seed_report',
+      itemId: spam.id,
+      itemTitle: spam.title,
+      itemReporterId: spam.reporterId,
+      itemReporterAlias: spam.reporterAlias,
+      reporterId: 'u_asha',
+      reason: 'Asking for money before handover - looks like a scam.',
+      status: ReportStatus.open,
+      createdAt: now.subtract(const Duration(hours: 1)),
+    );
     _secrets['seed_wallet'] = Verification.buildSecret(
       expectedAnswers: ['Woodland', 'library card|student id|metro card'],
     );
@@ -286,6 +331,8 @@ class LocalBackend implements Backend {
     _claims.clear();
     _messages.clear();
     _handoverCodes.clear();
+    _reports.clear();
+    _suspended.clear();
     _users.clear();
     _passwords.clear();
     final uid = _currentUid;
@@ -421,8 +468,75 @@ class LocalBackend implements Backend {
   }
 
   @override
-  Future<void> reportAbuse(String itemId, String reason) async {
+  Future<void> reportAbuse(Item item, String reason) async {
     _requireOnline();
+    final id = 'r_${DateTime.now().microsecondsSinceEpoch}';
+    _reports[id] = AbuseReport(
+      id: id,
+      itemId: item.id,
+      itemTitle: item.title,
+      itemReporterId: item.reporterId,
+      itemReporterAlias: item.reporterAlias,
+      reporterId: _uid,
+      reason: reason,
+      status: ReportStatus.open,
+      createdAt: DateTime.now(),
+    );
+    await _commit();
+  }
+
+  // ---- Moderation ----
+
+  @override
+  Stream<bool> watchIsAdmin() => _watch(() => _admins.contains(_currentUid));
+
+  @override
+  Stream<bool> watchIsSuspended() =>
+      _watch(() => _suspended.containsKey(_currentUid));
+
+  @override
+  Stream<List<AbuseReport>> watchReports() => _watch(
+    () => _admins.contains(_currentUid)
+        ? (_reports.values.toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt)))
+        : <AbuseReport>[],
+  );
+
+  @override
+  Future<void> resolveReport(
+    AbuseReport report,
+    ReportStatus status,
+    String resolution,
+  ) async {
+    _requireAdmin();
+    _reports[report.id] = AbuseReport.fromMap({
+      ...report.toMap(),
+      'status': status.name,
+      'resolution': resolution,
+    });
+    await _commit();
+  }
+
+  @override
+  Future<void> moderateItem(
+    Item item, {
+    required bool hidden,
+    String? note,
+  }) async {
+    _requireAdmin();
+    _items[item.id] = _items[item.id]!.copyWith(
+      hidden: hidden,
+      moderationNote: note,
+      updatedAt: DateTime.now(),
+    );
+    await _commit();
+  }
+
+  @override
+  Future<void> suspendUser(String uid, String reason) async {
+    _requireAdmin();
+    _suspended[uid] = reason;
+    await _commit();
   }
 
   // ---- Claims ----

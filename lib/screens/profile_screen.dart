@@ -7,6 +7,7 @@ import '../providers.dart';
 import '../services/local_backend.dart';
 import '../services/notifications.dart';
 import '../widgets/common.dart';
+import 'admin_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -52,6 +53,25 @@ class ProfileScreen extends ConsumerWidget {
             _Stat(label: 'Items returned', value: '$returned'),
           ],
         ),
+        if (ref.watch(isAdminProvider).value ?? false) ...[
+          const SectionTitle('MODERATOR'),
+          Card(
+            child: ListTile(
+              leading: Badge(
+                isLabelVisible: (ref.watch(reportsProvider).value ?? const [])
+                    .any((r) => r.status == ReportStatus.open),
+                child: const Icon(Icons.admin_panel_settings_outlined),
+              ),
+              title: const Text('Moderation dashboard'),
+              subtitle: const Text('Reports, hidden posts, campus stats'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AdminScreen()),
+              ),
+            ),
+          ),
+        ],
         if (backend is LocalBackend) ...[
           const SectionTitle('DEMO MODE'),
           SwitchListTile(
@@ -86,6 +106,13 @@ class ProfileScreen extends ConsumerWidget {
             },
           ),
         ],
+        if (!backend.isDemo)
+          ListTile(
+            leading: const Icon(Icons.fingerprint),
+            title: const Text('Your user ID'),
+            subtitle: SelectableText(user.uid),
+            dense: true,
+          ),
         const SectionTitle('PRIVACY & SAFETY'),
         const ListTile(
           leading: Icon(Icons.shield_outlined),

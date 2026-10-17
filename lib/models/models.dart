@@ -231,6 +231,10 @@ class Item {
   final String? approvedClaimId;
   final List<StatusEvent> history;
 
+  /// Set by a moderator: the post is removed from listings and the map.
+  final bool hidden;
+  final String? moderationNote;
+
   const Item({
     required this.id,
     required this.type,
@@ -254,6 +258,8 @@ class Item {
     this.linkedItemId,
     this.approvedClaimId,
     this.history = const [],
+    this.hidden = false,
+    this.moderationNote,
   });
 
   ItemCategory get categoryInfo => ItemCategory.byId(category);
@@ -265,6 +271,8 @@ class Item {
     String? approvedClaimId,
     DateTime? updatedAt,
     List<StatusEvent>? history,
+    bool? hidden,
+    String? moderationNote,
   }) => Item(
     id: id,
     type: type,
@@ -288,6 +296,8 @@ class Item {
     linkedItemId: linkedItemId,
     approvedClaimId: approvedClaimId ?? this.approvedClaimId,
     history: history ?? this.history,
+    hidden: hidden ?? this.hidden,
+    moderationNote: moderationNote ?? this.moderationNote,
   );
 
   Map<String, dynamic> toMap() => {
@@ -313,6 +323,8 @@ class Item {
     'linkedItemId': linkedItemId,
     'approvedClaimId': approvedClaimId,
     'history': history.map((e) => e.toMap()).toList(),
+    'hidden': hidden,
+    'moderationNote': moderationNote,
   };
 
   factory Item.fromMap(Map<String, dynamic> m) => Item(
@@ -340,6 +352,8 @@ class Item {
     history: (m['history'] as List? ?? [])
         .map((e) => StatusEvent.fromMap(Map<String, dynamic>.from(e as Map)))
         .toList(),
+    hidden: m['hidden'] == true,
+    moderationNote: m['moderationNote'] as String?,
   );
 }
 
@@ -523,4 +537,60 @@ class AppUser {
     if (parts.length == 1) return parts.first;
     return '${parts.first} ${parts.last[0].toUpperCase()}.';
   }
+}
+
+enum ReportStatus { open, dismissed, actioned }
+
+/// Abuse report on a post: `reports/{id}`. Created by any verified user,
+/// readable and resolvable only by moderators (`admins/{uid}`).
+class AbuseReport {
+  final String id;
+  final String itemId;
+  final String itemTitle;
+  final String itemReporterId;
+  final String itemReporterAlias;
+  final String reporterId;
+  final String reason;
+  final ReportStatus status;
+  final String? resolution;
+  final DateTime createdAt;
+
+  const AbuseReport({
+    required this.id,
+    required this.itemId,
+    required this.itemTitle,
+    required this.itemReporterId,
+    required this.itemReporterAlias,
+    required this.reporterId,
+    required this.reason,
+    required this.status,
+    this.resolution,
+    required this.createdAt,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'itemId': itemId,
+    'itemTitle': itemTitle,
+    'itemReporterId': itemReporterId,
+    'itemReporterAlias': itemReporterAlias,
+    'reporterId': reporterId,
+    'reason': reason,
+    'status': status.name,
+    'resolution': resolution,
+    'createdAt': createdAt,
+  };
+
+  factory AbuseReport.fromMap(Map<String, dynamic> m) => AbuseReport(
+    id: m['id'] as String,
+    itemId: (m['itemId'] ?? '') as String,
+    itemTitle: (m['itemTitle'] ?? '') as String,
+    itemReporterId: (m['itemReporterId'] ?? '') as String,
+    itemReporterAlias: (m['itemReporterAlias'] ?? '') as String,
+    reporterId: (m['reporterId'] ?? '') as String,
+    reason: (m['reason'] ?? '') as String,
+    status: _enumByName(ReportStatus.values, m['status'], ReportStatus.open),
+    resolution: m['resolution'] as String?,
+    createdAt: parseDate(m['createdAt']) ?? DateTime.now(),
+  );
 }

@@ -56,8 +56,47 @@ class AuthGate extends ConsumerWidget {
             !user.emailVerified) {
           return const VerifyEmailScreen();
         }
+        if (ref.watch(isSuspendedProvider).value ?? false) {
+          return const _SuspendedScreen();
+        }
         return const HomeShell();
       },
     );
   }
+}
+
+/// Shown to accounts a moderator suspended (rules also block their writes).
+class _SuspendedScreen extends ConsumerWidget {
+  const _SuspendedScreen();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
+    body: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.block, size: 72, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(
+              'Account suspended',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'A moderator suspended this account after a report. Contact '
+              'the campus lost & found office if you think this is a mistake.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            OutlinedButton(
+              onPressed: ref.read(backendProvider).signOut,
+              child: const Text('Sign out'),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }

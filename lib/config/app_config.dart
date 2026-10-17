@@ -15,9 +15,8 @@ class AppConfig {
   /// Restricting sign-up to campus e-mail is the first anti-fraud layer:
   /// every claimant is a traceable member of the campus.
   ///
-  /// TESTING: open to any e-mail. Before submission restore:
-  ///   <String>['vitstudent.ac.in', 'vit.ac.in']
-  static const allowedEmailDomains = <String>[];
+  /// For testing with non-VIT accounts, temporarily set this to `<String>[]`.
+  static const allowedEmailDomains = <String>['vitstudent.ac.in', 'vit.ac.in'];
 
   /// Firebase mode requires a verified campus e-mail before posting/claiming.
   static const requireEmailVerification = true;

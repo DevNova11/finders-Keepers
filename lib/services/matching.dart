@@ -127,3 +127,55 @@ List<MatchResult> findMatches(Item item, Iterable<Item> candidates) {
         ..sort((x, y) => y.score.compareTo(x.score));
   return results.take(5).toList();
 }
+
+/// A location-based recommendation for the "Near you" section.
+class NearbyRecommendation {
+  final Item item;
+  final double metres;
+
+  /// Why it is recommended beyond being close, e.g. "Could be your keys".
+  final String? reason;
+  const NearbyRecommendation(this.item, this.metres, [this.reason]);
+}
+
+/// Open items close to [here] posted by others, ranked so that items
+/// relevant to the user's own open reports come first (a found item in the
+/// same category as something they lost, or a lost item matching something
+/// they found), then by distance.
+List<NearbyRecommendation> recommendNearby(
+  Iterable<Item> items,
+  LatLng here, {
+  required String uid,
+  double radiusMetres = 1500,
+  int limit = 10,
+}) {
+  final all = items.toList();
+  final mine = all.where((i) => i.reporterId == uid && i.status.isOpen);
+  const distance = Distance();
+  final recs = <NearbyRecommendation>[];
+  for (final i in all) {
+    if (i.reporterId == uid || !i.status.isOpen || i.hidden) continue;
+    final m = distance.as(LengthUnit.Meter, here, LatLng(i.lat, i.lng));
+    if (m > radiusMetres) continue;
+    String? reason;
+    for (final own in mine.where((o) => o.type != i.type)) {
+      if (scoreMatch(own, i).score >= AppConfig.matchThreshold ||
+          own.category == i.category) {
+        reason = own.type == ItemType.lost
+            ? 'Could be your "${own.title}"'
+            : 'May be looking for what you found';
+        break;
+      }
+    }
+    recs.add(NearbyRecommendation(i, m, reason));
+  }
+  recs.sort((a, b) {
+    final r = (a.reason == null ? 1 : 0).compareTo(b.reason == null ? 1 : 0);
+    return r != 0 ? r : a.metres.compareTo(b.metres);
+  });
+  return recs.take(limit).toList();
+}
+
+String formatDistance(double metres) => metres < 1000
+    ? '${(metres / 10).round() * 10} m'
+    : '${(metres / 1000).toStringAsFixed(1)} km';

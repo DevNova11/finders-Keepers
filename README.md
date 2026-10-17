@@ -7,7 +7,7 @@ stop fraudulent claims, and keeps personal data private throughout.
 | Requirement | Where |
 |---|---|
 | 01 Report lost/found items with descriptions, images, locations | `lib/screens/report_screen.dart` |
-| 02 Searchable listing | `lib/screens/browse_screen.dart` (text search, lost/found, category, resolved filters) |
+| 02 Searchable listing | `lib/screens/browse_screen.dart` (text search, lost/found, category, resolved, nearest-first) |
 | 03 Approximate locations on a map | `lib/screens/map_screen.dart` (OpenStreetMap, ~100 m areas) |
 | 04 Ownership claims | `lib/screens/claim_screen.dart` |
 | 05 Ownership verification before handover | `lib/services/verification.dart`, `claim_review_screen.dart`, `my_claim_screen.dart`, `firestore.rules` |
@@ -15,33 +15,38 @@ stop fraudulent claims, and keeps personal data private throughout.
 | 07 Interrupted submissions / bad network | `lib/services/outbox.dart`, draft autosave, Firestore offline cache |
 | 08 Protect sensitive information | aliases, private subcollections, EXIF stripping, blur, approximate location, in-app chat |
 | Bonus: offline-first | Firestore persistent cache + resumable outbox + drafts |
-| Bonus: push notifications on matches | `functions/index.js` (FCM) + in-app watcher `lib/services/notifications.dart` |
-| Bonus: image similarity | 64-bit dHash per photo (`lib/services/image_processing.dart`), used in match score |
+| Bonus: notifications on matches | in-app match/claim alerts (`lib/services/notifications.dart`); FCM push via `functions/index.js` on the Blaze plan |
+| Bonus: image similarity | 64-bit dHash fingerprint per photo (`lib/services/image_processing.dart`), used in match score |
+| Bonus: location-based recommendations | "Near you" on Browse, nearest-first sort, your position on the map (`lib/services/location.dart`, `recommendNearby` in `matching.dart`) |
+| Bonus: admin moderation interface | `lib/screens/admin_screen.dart`: reports queue, hide/restore posts, suspend accounts, campus stats |
+| Bonus: secure in-app messaging | claim-scoped chat readable only by the two parties (`chat_screen.dart` + rules) |
 
 Tech: **Flutter 3.47 · Riverpod 3 · Firebase Auth · Cloud Firestore ·
-Firebase Storage · FCM · Cloud Functions · flutter_map (OpenStreetMap)**.
+flutter_map (OpenStreetMap) · geolocator · FCM / Cloud Functions (optional)**.
 
 Database layout and workflow diagrams: [docs/DATABASE_AND_WORKFLOW.md](docs/DATABASE_AND_WORKFLOW.md).
 
 ---
 
-## Quick start (demo mode — no setup)
+## Try it
 
-The app ships with a placeholder `lib/firebase_options.dart`. While it is a
-placeholder the app runs in **demo mode**: everything is stored on the device,
-and three seeded demo students (Asha, Ben, Chen) let you play out the whole
-flow on one phone by switching accounts from the Profile tab.
+The [GitHub release](https://github.com/DevNova11/finders-Keepers/releases) has two APKs:
 
+| APK | What it is |
+|---|---|
+| `FindersKeepers-firebase.apk` | The real app, connected to Firebase project `finders-keepers-9b78c`. Sign up with your VIT e-mail, verify it, and data is shared between everyone using the app. |
+| `FindersKeepers-demo.apk` | Self-contained demo: no sign-up, data stays on the phone, five sample accounts (3 students, a moderator and a spammer) so one person can play every role. |
+
+Build them yourself:
 ```bash
 flutter pub get
-flutter run                 # or: flutter build apk --release
+flutter build apk --release                      # Firebase app
+flutter build apk --release --dart-define=DEMO=true   # demo build
 ```
 
-The APK is written to `build/app/outputs/flutter-apk/app-release.apk`.
+### Demo script (demo APK, also used for the video)
 
-### Suggested demo script (for the video)
-
-1. Sign in as **Chen**. You see Chen's found *Student ID card* with the secret
+1. Sign in as **Chen**. Chen's found *Student ID card* has the secret
    questions "What name is printed on the card?" / "What is your school / department?".
 2. Switch account → **Asha**. Browse → open *Student ID card* → **This is mine — claim it**.
    Answer `Asha Raman` and `SENSE`, describe it, submit.
@@ -51,46 +56,68 @@ The APK is written to `build/app/outputs/flutter-apk/app-release.apk`.
 4. Switch to **Asha** → Activity → My claims → the claim shows a **6-digit handover code**.
 5. Switch to **Chen** → open the claim → enter the code → item becomes **Returned**
    (a wrong code is refused). The item timeline shows Found → Claimed → Returned.
-6. Offline: Profile → **Simulate offline** → report an item → it waits under
+6. **Near you**: on Browse tap **Enable** in the *Near you* card. Off campus it
+   falls back to the campus centre. Items related to your own reports are
+   ranked first ("Could be your …"). The ➤ button sorts the list nearest-first.
+7. **Moderation**: sign in as **Campus Moderator** → Profile → *Moderation
+   dashboard*. The scam post "Found iPhone 16 – pay Rs 500 to collect" has an
+   open report → **Suspend poster** (hides the post too). Sign in as **Sam
+   Spammer** to see the suspended screen. Check *Overview* for campus stats
+   and *Hidden posts* to restore a post.
+8. **Offline**: Profile → **Simulate offline** → report an item → it waits under
    *Activity → Waiting to upload*; switch back online → it uploads by itself.
    Leave a report form half-filled and close the app → reopen the form → the draft is restored.
-7. Matching: as **Ben**, report a *found* white earbuds case at the Food Court
+9. **Matching**: as **Ben**, report a *found* white earbuds case at the Food Court
    (near TT). Switch to **Asha** → her *White wireless earbuds* lost post lists it
-   under **Possible matches** with a % score. (Live match notifications fire
-   when a matching item arrives while you are signed in; with Firebase the
-   Cloud Function pushes them even when the app is closed. Profile → *Test
-   notification* shows what one looks like.)
+   under **Possible matches** with a % score.
 
 ---
 
-## Firebase setup (production mode)
+## Firebase setup
 
-1. Create a Firebase project (console.firebase.google.com) and enable
-   **Authentication → Email/Password**, **Cloud Firestore**, **Storage**.
-2. Connect the app. This replaces the placeholder options, and the app switches to Firebase automatically:
+The repo is already connected to Firebase project **`finders-keepers-9b78c`**
+(`lib/firebase_options.dart`). To use your own project:
+
+1. Create a Firebase project and enable **Authentication → Email/Password**
+   and **Cloud Firestore**.
+2. Connect the app:
    ```bash
    dart pub global activate flutterfire_cli
    flutterfire configure
    ```
-3. Deploy security rules and indexes:
+3. Deploy the security rules and indexes:
    ```bash
-   firebase deploy --only firestore,storage
+   firebase deploy --only firestore
    ```
-4. (Optional, Blaze plan) deploy Cloud Functions for push notifications,
-   server-side match alerts and claim rate-limiting:
-   ```bash
-   cd functions
-   npm install
-   firebase deploy --only functions
-   ```
-5. Campus settings live in `lib/config/app_config.dart`. It is set up for
-   **VIT Vellore**: map centre, 17 campus landmarks (Main Gate, TT, SJT, SMV,
-   GDN, PRP, library, Food Court, MH/LH, grounds…, coordinates from
-   OpenStreetMap), sign-up restricted to `@vitstudent.ac.in` / `@vit.ac.in`,
-   and the Main Gate security desk as the recommended handover point.
+4. **Make yourself a moderator**: sign in once, copy *Your user ID* from the
+   Profile tab, then in the Firebase console → Firestore create a document
+   `admins/<your user id>` (any field, e.g. `name: "Moderator"`). The
+   *Moderation dashboard* appears in your Profile tab. Admins can only be
+   added from the console; the rules forbid it from the app.
+5. Campus settings live in `lib/config/app_config.dart`: VIT Vellore map
+   centre, 17 landmarks (coordinates from OpenStreetMap), sign-up restricted
+   to `@vitstudent.ac.in` / `@vit.ac.in`, and the Main Gate security desk as
+   the recommended handover point.
 
-You can also test everything against the Firebase Emulator Suite
-(`firebase emulators:start`, configured in `firebase.json`).
+### Free (Spark) plan vs Blaze
+
+The project runs on the **free Spark plan**. Firebase Storage and Cloud
+Functions need the pay-as-you-go **Blaze** plan, so on Spark:
+
+* **Photos stay on the phone.** They are still processed (EXIF removed,
+  blurred, fingerprinted) and the 64-bit fingerprint is uploaded, so
+  image-similarity matching keeps working, but the photo itself isn't shared.
+* **Notifications** come from the in-app watcher while the app is open
+  (new possible match, new claim, claim decision).
+
+After upgrading to Blaze:
+```bash
+# lib/config/app_config.dart → uploadPhotosToFirebase = true
+firebase deploy --only storage
+cd functions && npm install && firebase deploy --only functions
+```
+This turns on shared photos, proof photos on claims, server-side match push
+notifications to closed apps, and the claim rate-limit flag.
 
 ---
 
@@ -104,7 +131,9 @@ exchange phone numbers.
 * Sign-up with campus e-mail only (`allowedEmailDomains`), and **e-mail
   verification is required** before posting, claiming or chatting
   (checked in the UI *and* via `request.auth.token.email_verified` in the rules).
-* A **declaration** checkbox on each claim; suspicious posts can be reported.
+* A **declaration** checkbox on each claim. Suspicious posts can be reported,
+  and moderators can hide them and **suspend** the account. The rules then
+  block every write from that account.
 
 ### Layer 2 — secret knowledge (challenge questions)
 * When reporting a found item, the finder writes 1–3 **private questions**
@@ -116,13 +145,12 @@ exchange phone numbers.
 * The public description is kept deliberately vague; the form reminds the finder.
 
 ### Layer 3 — the claim
-* The claimant answers the questions, describes unique details, and may
-  attach a proof photo (receipt, older photo with the item). A claim is
-  visible only to the claimant and the finder.
+* The claimant answers the questions and describes unique details (plus a
+  proof photo on Blaze). A claim is visible only to the claimant and the finder.
 * **One attempt per user per item**: claim ids are `{itemId}_{uid}` and the
   rules forbid recreating them, so answers cannot be brute-forced.
-* A Cloud Function flags users who submit more than 5 claims in 24 h; the
-  finder sees a red warning on flagged claims.
+* On Blaze, a Cloud Function flags users who submit more than 5 claims in
+  24 h; the finder sees a red warning on flagged claims.
 
 ### Layer 4 — finder review
 * The finder's app hashes each submitted answer with the item's salt and
@@ -136,7 +164,7 @@ exchange phone numbers.
 * On approval, the **claimant's** device generates a random 6-digit code;
   only its salted hash is written to the claim (the plain code is kept in a
   claimant-only document).
-* At the meet-up (recommended: campus security desk) the claimant reads the
+* At the meet-up (recommended: Main Gate security desk) the claimant reads the
   code aloud and the finder types it in. Firestore rules recompute
   `sha256(code + salt)` and only then allow claim → **completed** and
   item → **returned**. The item therefore goes to the *approved* claimant,
@@ -144,23 +172,48 @@ exchange phone numbers.
 
 ---
 
+## Moderation
+
+* Any verified user can **report a suspicious post** (item page → ⋮).
+* Moderators (`admins/{uid}`) get a **Moderation dashboard** in Profile:
+  * **Open reports**: view the post, **hide** it with a note shown to its
+    author, **dismiss** the report, or **suspend the poster** (also hides the post).
+  * **Hidden posts**: restore a post.
+  * **Overview**: open lost/found counts, awaiting handover, returned,
+    return rate, open reports, and the top loss hotspots on campus.
+* Hidden posts disappear from listings, the map, matching and recommendations
+  for everyone except their author. Suspended users see a suspended screen,
+  and `firestore.rules` rejects all their writes.
+* Moderators can only change `hidden` / `moderationNote` on items. They
+  cannot edit content, claims or chats.
+
+## Location-based recommendations
+* **Near you** (top of Browse): open items within 1.5 km of your GPS
+  position. Items relevant to your own open reports come first (e.g. a
+  found item in the same category as something you lost: "Could be your
+  'Black wallet'"), then the rest by distance.
+* **Nearest first** (➤ on Browse) sorts the whole listing by distance and
+  shows how far each item is.
+* Your position appears as a blue dot on the map when you're on campus. When
+  you're more than 3 km away, recommendations use the campus centre instead.
+* Location is read on the device only and never uploaded.
+
 ## Privacy protections
 * Others see only an alias ("Asha R."); e-mail, full name and phone number are never displayed.
 * Public map pins are snapped to a ~110 m grid and drawn as an area; the exact
   spot is stored in the reporter-only private document.
-* Photos are re-encoded on the device before upload → **EXIF/GPS metadata removed**,
+* Photos are re-encoded on the device → **EXIF/GPS metadata removed**,
   resized to ≤1280 px; sensitive categories (ID cards, wallets, phones, laptops)
-  are **blurred by default**.
-* Claim answers, proof photos and chats are readable only by the two parties
-  (Firestore + Storage rules).
+  are **blurred by default**. On the free plan they never leave the phone.
+* Claim answers and chats are readable only by the two parties (rules).
 * Chat warns before sending something that looks like a phone number or e-mail.
-* Clients cannot delete anything; abuse reports are write-only.
+* Clients cannot delete anything; abuse reports are readable only by moderators.
 
 ## Offline & interrupted submissions
 * **Drafts**: the report and claim forms autosave (including copied photos) and restore on reopen.
-* **Outbox**: on submit, photos are processed locally and the submission is persisted
-  to disk, then uploaded in the background. Uploads resume from the last
-  successful photo and retry with exponential backoff and on reconnect.
+* **Outbox**: on submit, the submission is processed locally and persisted to
+  disk, then uploaded in the background. It retries with exponential backoff
+  and on reconnect, resuming from the last successful step.
   Client-generated ids make retries idempotent (no duplicates).
 * **Firestore offline cache**: browsing, the map and your items work offline;
   writes are queued and synced automatically. An offline banner shows the state.
@@ -169,7 +222,7 @@ exchange phone numbers.
 ```
 lib/
   config/app_config.dart        campus settings
-  models/models.dart            Item, ItemSecret, Claim, ChatMessage, enums
+  models/models.dart            Item, ItemSecret, Claim, ChatMessage, AbuseReport
   services/
     backend.dart                backend interface
     firebase_backend.dart       Firestore / Auth / Storage implementation
@@ -177,15 +230,19 @@ lib/
     outbox.dart                 resumable offline submission queue
     verification.dart           answer hashing, scoring, handover codes
     image_processing.dart       EXIF strip, blur, resize, dHash
-    matching.dart               lost↔found match scoring, keywords, location snapping
+    matching.dart               match scoring, Near-you ranking, keywords
+    location.dart               GPS position (on-device only)
     notifications.dart          local + FCM notifications, match watcher
-  screens/                      UI
+  screens/                      UI (incl. admin_screen.dart)
 firestore.rules, storage.rules  server-side enforcement
-functions/index.js              push notifications, match alerts, rate limiting
-test/logic_test.dart            unit tests for verification, matching, privacy, search
+functions/index.js              push notifications, match alerts, rate limiting (Blaze)
+test/logic_test.dart            unit tests
 ```
 
 ## Tests
 ```bash
 flutter test
 ```
+21 unit tests cover answer hashing and scoring, handover codes, location
+snapping, aliases, match scoring, image fingerprints and EXIF removal,
+search filters, Near-you ranking and the moderation models.

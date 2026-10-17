@@ -49,16 +49,30 @@ class _ItemView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider)!;
     final isMine = item.reporterId == user.uid;
+    final isAdmin = ref.watch(isAdminProvider).value ?? false;
     final t = Theme.of(context).textTheme;
+
+    if (item.hidden && !isMine && !isAdmin) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: const EmptyState(
+          icon: Icons.gpp_bad_outlined,
+          title: 'This post was removed by moderators',
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
         title: Text(item.isFound ? 'Found item' : 'Lost item'),
         actions: [
           PopupMenuButton<String>(
-            onSelected: (v) => v == 'close'
-                ? _close(context, ref)
-                : _reportAbuse(context, ref),
+            onSelected: (v) => switch (v) {
+              'close' => _close(context, ref),
+              'hide' => _moderate(context, ref, true),
+              'restore' => _moderate(context, ref, false),
+              _ => _reportAbuse(context, ref),
+            },
             itemBuilder: (_) => [
               if (isMine && item.status.isOpen)
                 const PopupMenuItem(
@@ -70,6 +84,15 @@ class _ItemView extends ConsumerWidget {
                   value: 'abuse',
                   child: Text('Report suspicious post'),
                 ),
+              if (isAdmin)
+                PopupMenuItem(
+                  value: item.hidden ? 'restore' : 'hide',
+                  child: Text(
+                    item.hidden
+                        ? 'Moderator: restore post'
+                        : 'Moderator: hide post',
+                  ),
+                ),
             ],
           ),
         ],
@@ -77,6 +100,14 @@ class _ItemView extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 120),
         children: [
+          if (item.hidden)
+            InfoBox(
+              icon: Icons.gpp_bad_outlined,
+              color: Colors.red,
+              text:
+                  'Hidden by moderators: ${item.moderationNote ?? 'policy violation'}. '
+                  'Other students cannot see this post.',
+            ),
           _Gallery(item: item),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -279,6 +310,23 @@ class _ItemView extends ConsumerWidget {
     }
   }
 
+  Future<void> _moderate(BuildContext context, WidgetRef ref, bool hide) async {
+    try {
+      await ref
+          .read(backendProvider)
+          .moderateItem(
+            item,
+            hidden: hide,
+            note: hide ? 'Removed by a moderator' : null,
+          );
+      if (context.mounted) {
+        showSnack(context, hide ? 'Post hidden' : 'Post restored');
+      }
+    } catch (e) {
+      if (context.mounted) showSnack(context, friendlyError(e), error: true);
+    }
+  }
+
   Future<void> _reportAbuse(BuildContext context, WidgetRef ref) async {
     final ctrl = TextEditingController();
     final reason = await showDialog<String>(
@@ -307,7 +355,7 @@ class _ItemView extends ConsumerWidget {
     ctrl.dispose();
     if (reason == null || reason.isEmpty) return;
     try {
-      await ref.read(backendProvider).reportAbuse(item.id, reason);
+      await ref.read(backendProvider).reportAbuse(item, reason);
       if (context.mounted) {
         showSnack(context, 'Thanks — moderators will review it.');
       }

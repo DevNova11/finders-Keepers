@@ -52,9 +52,22 @@ final onlineProvider = Provider<bool>((ref) {
 
 // ---- Data ----
 
-final recentItemsProvider = StreamProvider<List<Item>>((ref) {
+/// Every recent item, including posts hidden by moderators.
+final allItemsProvider = StreamProvider<List<Item>>((ref) {
   ref.watch(currentUserProvider);
   return ref.watch(backendProvider).watchRecentItems();
+});
+
+/// What listings, the map and matching use: hidden posts are removed,
+/// except the viewer's own (so they can see the moderator's note).
+final recentItemsProvider = Provider<AsyncValue<List<Item>>>((ref) {
+  final uid = ref.watch(currentUserProvider)?.uid;
+  return ref
+      .watch(allItemsProvider)
+      .whenData(
+        (items) =>
+            items.where((i) => !i.hidden || i.reporterId == uid).toList(),
+      );
 });
 
 final itemProvider = StreamProvider.autoDispose.family<Item?, String>(
@@ -102,3 +115,22 @@ final messagesProvider = StreamProvider.autoDispose
 final secretProvider = FutureProvider.autoDispose.family<ItemSecret?, String>(
   (ref, itemId) => ref.watch(backendProvider).getSecret(itemId),
 );
+
+// ---- Moderation ----
+
+final isAdminProvider = StreamProvider<bool>((ref) {
+  ref.watch(currentUserProvider);
+  return ref.watch(backendProvider).watchIsAdmin();
+});
+
+final isSuspendedProvider = StreamProvider<bool>((ref) {
+  ref.watch(currentUserProvider);
+  return ref.watch(backendProvider).watchIsSuspended();
+});
+
+final reportsProvider = StreamProvider<List<AbuseReport>>((ref) {
+  if (ref.watch(isAdminProvider).value != true) {
+    return Stream.value(const []);
+  }
+  return ref.watch(backendProvider).watchReports();
+});

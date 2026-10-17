@@ -213,7 +213,7 @@ class _DemoAccounts extends StatelessWidget {
             'claim → verify → handover flow.',
       ),
       const SizedBox(height: 8),
-      for (final u in backend.demoUsers.take(4))
+      for (final u in backend.demoUsers)
         Card(
           margin: const EdgeInsets.symmetric(vertical: 4),
           child: ListTile(
