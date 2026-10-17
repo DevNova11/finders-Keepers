@@ -69,7 +69,9 @@ class FirebaseBackend implements Backend {
       password: password,
     );
     await cred.user!.updateDisplayName(name.trim());
-    await cred.user!.sendEmailVerification();
+    if (AppConfig.requireEmailVerification) {
+      await cred.user!.sendEmailVerification();
+    }
     await _db.collection('users').doc(cred.user!.uid).set({
       'displayName': name.trim(),
       'createdAt': FieldValue.serverTimestamp(),

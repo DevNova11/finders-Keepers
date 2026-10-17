@@ -34,7 +34,7 @@ void showSnack(BuildContext context, String msg, {bool error = false}) {
 String friendlyError(Object e) {
   final s = e.toString();
   if (s.contains('permission-denied')) {
-    return 'Not allowed. Make sure your e-mail is verified.';
+    return 'Not allowed. Your account may be suspended, or this action is not permitted.';
   }
   if (s.contains('network') || s.contains('Network') || s.contains('offline')) {
     return 'You appear to be offline. Please try again when connected.';

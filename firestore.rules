@@ -2,7 +2,7 @@ rules_version = '2';
 
 // Finders Keepers — Cloud Firestore security rules.
 // The server-side half of the ownership-verification and privacy design:
-//  * only verified campus accounts may post, claim or chat
+//  * only signed-in, non-suspended campus accounts may post, claim or chat
 //  * item answers / exact location live in a reporter-only subcollection
 //  * claims are visible only to the claimant and the item's reporter
 //  * one claim per user per item (deterministic id) → answers can't be brute-forced
@@ -22,9 +22,10 @@ service cloud.firestore {
     function notSuspended() {
       return !exists(/databases/$(database)/documents/suspended/$(uid()));
     }
-    function verified() {
-      return signedIn() && request.auth.token.email_verified == true
-        && notSuspended();
+    // E-mail verification is not required; any signed-in account that a
+    // moderator has not suspended may write.
+    function canWrite() {
+      return signedIn() && notSuspended();
     }
     function changedOnly(keys) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
@@ -43,7 +44,7 @@ service cloud.firestore {
     match /items/{itemId} {
       allow read: if signedIn();
 
-      allow create: if verified()
+      allow create: if canWrite()
         && request.resource.data.id == itemId
         && request.resource.data.reporterId == uid()
         && ((request.resource.data.type == 'lost' && request.resource.data.status == 'lost')
@@ -60,7 +61,7 @@ service cloud.firestore {
       allow update: if isAdmin()
         && changedOnly(['hidden', 'moderationNote', 'updatedAt']);
 
-      allow update: if verified()
+      allow update: if canWrite()
         && resource.data.reporterId == uid()
         && request.resource.data.reporterId == resource.data.reporterId
         && request.resource.data.type == resource.data.type
@@ -94,7 +95,7 @@ service cloud.firestore {
       // Hashed answers, salt, exact coordinates, private notes.
       match /private/{doc} {
         allow read: if signedIn() && get(itemPath(itemId)).data.reporterId == uid();
-        allow create: if verified() && getAfter(itemPath(itemId)).data.reporterId == uid();
+        allow create: if canWrite() && getAfter(itemPath(itemId)).data.reporterId == uid();
         allow update, delete: if false;
       }
     }
@@ -107,7 +108,7 @@ service cloud.firestore {
       // resource == null lets a claimant check whether they already claimed.
       allow read: if signedIn() && (resource == null || isParty(resource.data));
 
-      allow create: if verified()
+      allow create: if canWrite()
         && claimId == request.resource.data.itemId + '_' + uid()
         && request.resource.data.id == claimId
         && request.resource.data.claimantId == uid()
@@ -122,7 +123,7 @@ service cloud.firestore {
         && str(request.resource.data.description, 15, 2000)
         && request.resource.data.createdAt == request.time;
 
-      allow update: if verified() && (
+      allow update: if canWrite() && (
         // Finder approves (item must be moved to "claimed" in the same batch) …
         (resource.data.itemReporterId == uid()
           && resource.data.status == 'pending'
@@ -163,7 +164,7 @@ service cloud.firestore {
 
       match /messages/{messageId} {
         allow read: if signedIn() && isParty(get(claimPath(claimId)).data);
-        allow create: if verified()
+        allow create: if canWrite()
           && isParty(get(claimPath(claimId)).data)
           && request.resource.data.senderId == uid()
           && str(request.resource.data.text, 1, 1000);
@@ -173,7 +174,7 @@ service cloud.firestore {
 
     // Abuse reports: write-only for users, reviewed in the moderation dashboard.
     match /reports/{reportId} {
-      allow create: if verified()
+      allow create: if canWrite()
         && request.resource.data.reporterId == uid()
         && request.resource.data.status == 'open'
         && str(request.resource.data.reason, 1, 500);

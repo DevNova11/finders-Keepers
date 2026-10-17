@@ -18,8 +18,9 @@ class AppConfig {
   /// For testing with non-VIT accounts, temporarily set this to `<String>[]`.
   static const allowedEmailDomains = <String>['vitstudent.ac.in', 'vit.ac.in'];
 
-  /// Firebase mode requires a verified campus e-mail before posting/claiming.
-  static const requireEmailVerification = true;
+  /// When true, Firebase accounts must click an e-mail verification link
+  /// before using the app (also re-enable the check in firestore.rules).
+  static const requireEmailVerification = false;
 
   /// Public coordinates are snapped to a grid of this many decimal places
   /// (3 decimals ≈ 110 m) so the exact spot of an item is never published.

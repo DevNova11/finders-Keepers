@@ -34,7 +34,7 @@ The [GitHub release](https://github.com/DevNova11/finders-Keepers/releases) has 
 
 | APK | What it is |
 |---|---|
-| `FindersKeepers-firebase.apk` | The real app, connected to Firebase project `finders-keepers-9b78c`. Sign up with your VIT e-mail, verify it, and data is shared between everyone using the app. |
+| `FindersKeepers-firebase.apk` | The real app, connected to Firebase project `finders-keepers-9b78c`. Sign up with your VIT e-mail and start using it straight away; data is shared between everyone using the app. |
 | `FindersKeepers-demo.apk` | Self-contained demo: no sign-up, data stays on the phone, five sample accounts (3 students, a moderator and a spammer) so one person can play every role. |
 
 Build them yourself:
@@ -128,9 +128,10 @@ prove they own it, and the finder never has to trust a stranger's word or
 exchange phone numbers.
 
 ### Layer 1 — accountable identities
-* Sign-up with campus e-mail only (`allowedEmailDomains`), and **e-mail
-  verification is required** before posting, claiming or chatting
-  (checked in the UI *and* via `request.auth.token.email_verified` in the rules).
+* Sign-up is restricted to campus e-mail addresses (`allowedEmailDomains`).
+  E-mail verification is **off** to keep onboarding instant; it can be turned
+  back on with `AppConfig.requireEmailVerification` plus the
+  `email_verified` check in `canWrite()` in `firestore.rules`.
 * A **declaration** checkbox on each claim. Suspicious posts can be reported,
   and moderators can hide them and **suspend** the account. The rules then
   block every write from that account.
@@ -174,7 +175,7 @@ exchange phone numbers.
 
 ## Moderation
 
-* Any verified user can **report a suspicious post** (item page → ⋮).
+* Any signed-in user can **report a suspicious post** (item page → ⋮).
 * Moderators (`admins/{uid}`) get a **Moderation dashboard** in Profile:
   * **Open reports**: view the post, **hide** it with a note shown to its
     author, **dismiss** the report, or **suspend the poster** (also hides the post).
